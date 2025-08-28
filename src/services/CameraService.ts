@@ -96,33 +96,54 @@ class CameraService {
         try {
           const blob = new Blob(this.recordedChunks, { type: 'video/mp4' });
           const filename = `inspection_${inspectionId}_${Date.now()}.mp4`;
+          const filePath = `videos/${filename}`;
           
-          // In a real Capacitor app, we'd save to filesystem
-          // For web demo, we'll create a job with blob URL
-          const fileUri = URL.createObjectURL(blob);
-          
-          const job: UploadJob = {
-            id: `job_${Date.now()}`,
-            inspectionId,
-            fileUri,
-            fileName: filename,
-            size: blob.size,
-            createdAt: Date.now(),
-            status: 'pending',
-            progress: 0
+          // Convert blob to base64 for filesystem storage
+          const reader = new FileReader();
+          reader.onload = async () => {
+            try {
+              const base64Data = (reader.result as string).split(',')[1];
+              
+              // Save to filesystem
+              await Filesystem.writeFile({
+                path: filePath,
+                data: base64Data,
+                directory: Directory.Data
+              });
+              
+              const job: UploadJob = {
+                id: `job_${Date.now()}`,
+                inspectionId,
+                fileUri: filePath, // Store filesystem path instead of blob URL
+                fileName: filename,
+                size: blob.size,
+                createdAt: Date.now(),
+                status: 'pending',
+                progress: 0
+              };
+
+              storageService.addUploadJob(job);
+              
+              // Cleanup
+              if (this.videoStream) {
+                this.videoStream.getTracks().forEach(track => track.stop());
+                this.videoStream = null;
+              }
+              this.isRecording = false;
+              this.recordedChunks = [];
+
+              resolve(job);
+            } catch (error) {
+              console.error('Failed to save video to filesystem:', error);
+              reject(error);
+            }
           };
-
-          storageService.addUploadJob(job);
           
-          // Cleanup
-          if (this.videoStream) {
-            this.videoStream.getTracks().forEach(track => track.stop());
-            this.videoStream = null;
-          }
-          this.isRecording = false;
-          this.recordedChunks = [];
-
-          resolve(job);
+          reader.onerror = () => {
+            reject(new Error('Failed to convert video to base64'));
+          };
+          
+          reader.readAsDataURL(blob);
         } catch (error) {
           reject(error);
         }

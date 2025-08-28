@@ -1,5 +1,6 @@
 import { UploadJob, UploadInitResponse, UploadCompleteRequest } from '../types';
 import { storageService } from './StorageService';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 // Utility functions from your original code
 const getFileExtFromBlobType = (blobType: string): string => {
@@ -26,7 +27,7 @@ const postReqOptBuilder = (data: any, isForm = false, headers = {}): RequestInit
 };
 
 class UploadService {
-  private readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.paraspot.ai';
+  private readonly API_BASE_URL = 'https://www.paraspot.ai/api';
   private readonly CHUNK_SIZE = parseInt(import.meta.env.VITE_CHUNK_SIZE_BYTES || '5242880'); // 5MB default
   private readonly UPLOAD_CONCURRENCY = parseInt(import.meta.env.VITE_UPLOAD_CONCURRENCY || '3');
 
@@ -212,38 +213,47 @@ class UploadService {
     const BATCH_SIZE = 4;
     const results: boolean[] = [];
     let failsCount = 0;
+    let lastTimeOnline = new Date();
 
     while (results.length < totalChunks) {
-      if (!navigator.onLine) {
-        await delay(5000);
-        continue;
-      }
+      if (navigator.onLine) {
+        lastTimeOnline = new Date();
+        
+        const batch: Array<{ presignedUrl: string; blob: Blob }> = [];
+        
+        for (let i = 0; i < BATCH_SIZE && results.length + i < totalChunks; i++) {
+          const chunkIndex = results.length + i;
+          batch.push({
+            presignedUrl: presignedUrls[chunkIndex],
+            blob: recordedBlobs[chunkIndex]
+          });
+        }
 
-      const batch: Array<{ presignedUrl: string; blob: Blob }> = [];
-      
-      for (let i = 0; i < BATCH_SIZE && results.length + i < totalChunks; i++) {
-        const chunkIndex = results.length + i;
-        batch.push({
-          presignedUrl: presignedUrls[chunkIndex],
-          blob: recordedBlobs[chunkIndex]
-        });
-      }
+        const batchResults = await Promise.all(
+          batch.map(({ presignedUrl, blob }) => this.uploadFileChunk(presignedUrl, blob))
+        );
 
-      const batchResults = await Promise.all(
-        batch.map(({ presignedUrl, blob }) => this.uploadFileChunk(presignedUrl, blob))
-      );
+        const successfulResults = batchResults.filter(r => r === true);
+        results.push(...successfulResults);
+        failsCount += batchResults.filter(r => r === false).length;
 
-      const successCount = batchResults.filter(r => r === true).length;
-      results.push(...batchResults.filter(r => r === true));
-      failsCount += batchResults.filter(r => r === false).length;
+        // Update progress
+        const progress = Math.floor((results.length / totalChunks) * 100);
+        storageService.updateUploadJob(jobId, { progress });
 
-      // Update progress
-      const progress = Math.floor((results.length / totalChunks) * 100);
-      storageService.updateUploadJob(jobId, { progress });
-
-      if (failsCount > 10) {
-        console.error("Too many failed chunks");
-        return false;
+        if (failsCount > 10) {
+          console.error("Too many failed chunks - stopping upload");
+          return false;
+        }
+      } else {
+        // Handle offline scenario
+        if (new Date().getTime() - lastTimeOnline.getTime() >= 120000) { // 2 minutes
+          console.error("Network offline for too long - stopping upload");
+          return false;
+        } else {
+          console.log("Network offline - waiting for connection...");
+          await delay(5000);
+        }
       }
     }
 
@@ -251,13 +261,39 @@ class UploadService {
   }
 
   private async getRecordedBlobs(fileUri: string): Promise<Blob[]> {
-    // For now, simulate with dummy data
-    // In a real implementation, you'd retrieve the actual recorded blobs
-    // This could be from IndexedDB, file system, or other storage
-    console.log('Getting recorded blobs for:', fileUri);
-    
-    // Return empty array for now - you'll need to implement this based on your recording system
-    return [];
+    try {
+      // Read the video file from filesystem
+      const result = await Filesystem.readFile({
+        path: fileUri,
+        directory: Directory.Data
+      });
+      
+      // Convert base64 to blob
+      const base64Data = result.data as string;
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const fullBlob = new Blob([byteArray], { type: 'video/mp4' });
+      
+      // Chunk the blob into optimal sizes for concurrent upload
+      const chunks: Blob[] = [];
+      const chunkSize = this.CHUNK_SIZE;
+      let offset = 0;
+      
+      while (offset < fullBlob.size) {
+        const chunk = fullBlob.slice(offset, offset + chunkSize);
+        chunks.push(chunk);
+        offset += chunkSize;
+      }
+      
+      return chunks;
+    } catch (error) {
+      console.error('Failed to read video file:', error);
+      throw new Error('Failed to read video file from storage');
+    }
   }
 
   pauseUpload(jobId: string): void {
