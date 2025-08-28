@@ -8,42 +8,42 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Mobile-optimized color system for Paraspot Lite */
-    --background: 248 252 255%;
-    --foreground: 213 24% 19%;
+    /* Light, clean color system for Paraspot Lite */
+    --background: 0 0% 100%;
+    --foreground: 222 39% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 213 24% 19%;
+    --card-foreground: 222 39% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 213 24% 19%;
+    --popover-foreground: 222 39% 11%;
 
-    /* Professional blue primary color */
-    --primary: 217 86% 55%;
+    /* Custom indigo primary color #4F46E5 */
+    --primary: 243 75% 59%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 217 86% 48%;
+    --primary-hover: 243 75% 52%;
 
-    /* Subtle secondary for cards */
-    --secondary: 214 32% 96%;
-    --secondary-foreground: 213 24% 19%;
+    /* Light gray secondary */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 39% 11%;
 
-    --muted: 214 32% 96%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 20% 50%;
 
-    --accent: 217 86% 97%;
-    --accent-foreground: 217 86% 35%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 222 39% 11%;
 
     /* Status colors for upload queue */
-    --success: 142 71% 45%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 32 95% 44%;
     --warning-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
-    --input: 214 32% 96%;
-    --ring: 217 86% 55%;
+    --input: 210 20% 96%;
+    --ring: 243 75% 59%;
 
     /* Mobile-optimized border radius */
     --radius: 0.75rem;

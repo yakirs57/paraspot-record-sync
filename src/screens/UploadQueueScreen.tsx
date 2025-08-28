@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MobileButton } from "@/components/mobile/MobileButton";
 import { MobileCard } from "@/components/mobile/MobileCard";
 import { StatusBadge } from "@/components/mobile/StatusBadge";
+import { TopBar } from "@/components/mobile/TopBar";
 import { storageService } from "@/services/StorageService";
 import { uploadService } from "@/services/UploadService";
 import { UploadJob } from "@/types";
@@ -142,26 +143,26 @@ export function UploadQueueScreen() {
   };
 
   return (
-    <div className="mobile-container safe-area-top">
-      <div className="py-4 space-y-4">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/')}
-            className="p-2 -ml-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Upload Queue</h1>
-            <p className="text-sm text-muted-foreground">
-              {uploadQueue.length} item{uploadQueue.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+    <div className="min-h-screen bg-background">
+      <div className="flex items-center px-4 py-3 bg-background border-b border-border safe-area-top">
+        <button 
+          onClick={() => navigate('/')}
+          className="p-2 -ml-2 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={24} />
+        </button>
+        <div className="ml-2">
+          <h1 className="text-lg font-semibold text-foreground">Upload Queue</h1>
+          <p className="text-sm text-muted-foreground">
+            {uploadQueue.length} item{uploadQueue.length !== 1 ? 's' : ''}
+          </p>
         </div>
+      </div>
+      <div className="mobile-container">
+        <div className="py-4 space-y-4">
 
-        {/* Queue Items */}
-        {uploadQueue.length === 0 ? (
+          {/* Queue Items */}
+          {uploadQueue.length === 0 ? (
           <MobileCard className="text-center py-8">
             <FileVideo size={48} className="mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">No uploads in queue</p>
@@ -235,8 +236,9 @@ export function UploadQueueScreen() {
                 </div>
               </MobileCard>
             ))}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

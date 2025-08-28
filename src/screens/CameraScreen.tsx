@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MobileButton } from "@/components/mobile/MobileButton";
+import { TopBar } from "@/components/mobile/TopBar";
 import { cameraService } from "@/services/CameraService";
 import { storageService } from "@/services/StorageService";
 import { ArrowLeft, FlipHorizontal, Zap, ZapOff, Circle, Square, Settings } from "lucide-react";

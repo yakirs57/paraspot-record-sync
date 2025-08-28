@@ -4,6 +4,7 @@ import { MobileButton } from "@/components/mobile/MobileButton";
 import { MobileInput } from "@/components/mobile/MobileInput";
 import { MobileCard } from "@/components/mobile/MobileCard";
 import { StatusBadge } from "@/components/mobile/StatusBadge";
+import { TopBar } from "@/components/mobile/TopBar";
 import { storageService } from "@/services/StorageService";
 import { InspectionRecord, UploadJob } from "@/types";
 import { Video, Upload, Clock, X } from "lucide-react";
@@ -79,13 +80,15 @@ export function HomeScreen() {
   const isValidInput = parseInspectionId(inspectionInput) !== null;
 
   return (
-    <div className="mobile-container safe-area-top">
-      <div className="py-8 space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">Paraspot Lite</h1>
-          <p className="text-sm text-muted-foreground">Professional inspection recording</p>
-        </div>
+    <div className="min-h-screen bg-background">
+      <TopBar />
+      <div className="mobile-container">
+        <div className="py-6 space-y-6">
+          {/* Welcome Section */}
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold text-foreground">Start New Inspection</h2>
+            <p className="text-sm text-muted-foreground">Enter your inspection ID or paste a link to begin</p>
+          </div>
 
         {/* Main Input Section */}
         <div className="space-y-4">
@@ -171,6 +174,7 @@ export function HomeScreen() {
               </div>
             </MobileCard>
           )}
+        </div>
         </div>
       </div>
     </div>
