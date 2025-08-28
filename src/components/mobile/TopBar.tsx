@@ -9,11 +9,11 @@ export function TopBar({ title, showLogo = true }: TopBarProps) {
       <div className="flex items-center justify-between px-4 py-3">
         {showLogo && (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-              <div className="w-6 h-6 bg-white rounded opacity-90 flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-blue-500 rounded-sm"></div>
-              </div>
-            </div>
+            <img 
+              src="/lovable-uploads/27bba1c3-f955-405f-bb22-451c36dcb9f3.png" 
+              alt="Paraspot Logo" 
+              className="w-8 h-8"
+            />
             <span className="text-lg font-semibold text-foreground">
               {title || 'Paraspot AI'}
             </span>
