@@ -9,17 +9,26 @@ interface MobileButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
 
 export const MobileButton = forwardRef<HTMLButtonElement, MobileButtonProps>(
   ({ className, variant = 'primary', fullWidth = false, children, ...props }, ref) => {
+    const getButtonVariant = () => {
+      switch (variant) {
+        case 'primary': return 'default';
+        case 'secondary': return 'secondary';
+        case 'outline': return 'outline';
+        case 'ghost': return 'ghost';
+        case 'destructive': return 'destructive';
+        default: return 'default';
+      }
+    };
+
     return (
       <Button
         ref={ref}
+        variant={getButtonVariant()}
         className={cn(
           "mobile-button",
           fullWidth && "w-full",
           variant === 'primary' && "bg-primary hover:bg-primary-hover text-primary-foreground",
-          variant === 'secondary' && "bg-secondary hover:bg-secondary/80 text-secondary-foreground",
           variant === 'outline' && "border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground",
-          variant === 'ghost' && "bg-transparent text-foreground hover:bg-muted",
-          variant === 'destructive' && "bg-destructive hover:bg-destructive/80 text-destructive-foreground",
           className
         )}
         {...props}
