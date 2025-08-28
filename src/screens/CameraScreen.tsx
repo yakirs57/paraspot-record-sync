@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MobileButton } from "@/components/mobile/MobileButton";
-import { TopBar } from "@/components/mobile/TopBar";
+
 import { cameraService } from "@/services/CameraService";
 import { storageService } from "@/services/StorageService";
-import { Camera, Zap, ZapOff, Circle, Square } from "lucide-react";
+import { Camera, Zap, ZapOff, Circle, Square, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function CameraScreen() {
@@ -142,11 +142,14 @@ export function CameraScreen() {
   if (hasPermission === false) {
     return (
       <div className="h-screen bg-background flex flex-col">
-        <TopBar 
-          title="Camera Access" 
-          showBack 
-          onBack={() => navigate('/')}
-        />
+        <div className="safe-area-top">
+          <button 
+            onClick={() => navigate('/')}
+            className="absolute top-4 left-4 z-10 p-2 rounded-full bg-background shadow-sm"
+          >
+            <ArrowLeft size={24} className="text-foreground" />
+          </button>
+        </div>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
             <Camera className="w-8 h-8 text-destructive" />
@@ -177,11 +180,14 @@ export function CameraScreen() {
   if (hasBackCamera === false) {
     return (
       <div className="h-screen bg-background flex flex-col">
-        <TopBar 
-          title="Camera Required" 
-          showBack 
-          onBack={() => navigate('/')}
-        />
+        <div className="safe-area-top">
+          <button 
+            onClick={() => navigate('/')}
+            className="absolute top-4 left-4 z-10 p-2 rounded-full bg-background shadow-sm"
+          >
+            <ArrowLeft size={24} className="text-foreground" />
+          </button>
+        </div>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
             <Camera className="w-8 h-8 text-destructive" />
@@ -206,11 +212,14 @@ export function CameraScreen() {
   if (hasPermission === null || hasBackCamera === null) {
     return (
       <div className="h-screen bg-background flex flex-col">
-        <TopBar 
-          title="Camera" 
-          showBack 
-          onBack={() => navigate('/')}
-        />
+        <div className="safe-area-top">
+          <button 
+            onClick={() => navigate('/')}
+            className="absolute top-4 left-4 z-10 p-2 rounded-full bg-background shadow-sm"
+          >
+            <ArrowLeft size={24} className="text-foreground" />
+          </button>
+        </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -233,13 +242,14 @@ export function CameraScreen() {
           className="w-full h-full object-cover"
         />
         
-        {/* Top Controls */}
-        <div className="absolute top-0 left-0 right-0 z-10">
-          <TopBar 
-            title="Recording" 
-            showBack 
-            onBack={() => navigate('/')}
-          />
+        {/* Back Button */}
+        <div className="absolute top-0 left-0 z-10 safe-area-top">
+          <button 
+            onClick={() => navigate('/')}
+            className="m-4 p-2 rounded-full bg-black/30 text-white"
+          >
+            <ArrowLeft size={24} />
+          </button>
         </div>
 
         {/* Bottom Controls */}
