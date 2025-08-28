@@ -7,7 +7,7 @@ import { TopBar } from "@/components/mobile/TopBar";
 import { storageService } from "@/services/StorageService";
 import { uploadService } from "@/services/UploadService";
 import { UploadJob } from "@/types";
-import { ArrowLeft, Play, Pause, RotateCcw, Trash2, FileVideo } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, Trash2, FileVideo, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function UploadQueueScreen() {
@@ -87,6 +87,22 @@ export function UploadQueueScreen() {
       title: "Upload Cancelled",
       description: `Cancelled upload for ${job.inspectionId}`,
     });
+  };
+
+  const handleViewVideo = (job: UploadJob) => {
+    if (job.fileUri) {
+      // Create a temporary URL to view the video
+      const link = document.createElement('a');
+      link.href = job.fileUri;
+      link.target = '_blank';
+      link.click();
+    } else {
+      toast({
+        title: "Video Not Available",
+        description: "Video file not found",
+        variant: "destructive"
+      });
+    }
   };
 
   const getActionButton = (job: UploadJob) => {
@@ -187,8 +203,16 @@ export function UploadQueueScreen() {
                   <div className="flex items-center gap-2 ml-2">
                     <StatusBadge status={job.status} />
                     <button
+                      onClick={() => handleViewVideo(job)}
+                      className="p-1 text-muted-foreground hover:text-primary"
+                      title="View Video"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
                       onClick={() => handleCancel(job)}
                       className="p-1 text-muted-foreground hover:text-destructive"
+                      title="Cancel Upload"
                     >
                       <Trash2 size={16} />
                     </button>
