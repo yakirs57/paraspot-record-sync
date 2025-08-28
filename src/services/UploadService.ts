@@ -1,6 +1,30 @@
 import { UploadJob, UploadInitResponse, UploadCompleteRequest } from '../types';
 import { storageService } from './StorageService';
 
+// Utility functions from your original code
+const getFileExtFromBlobType = (blobType: string): string => {
+  if (blobType.includes("video/webm")) return ".webm";
+  if (blobType.includes("video/mp4")) return ".mp4";
+  if (blobType.includes("video/x-matroska")) return ".mkv";
+  return "." + blobType.split("video/")[1].split(";")[0];
+};
+
+const delay = (ms: number): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+const postReqOptBuilder = (data: any, isForm = false, headers = {}): RequestInit => {
+  return {
+    method: 'POST',
+    headers: {
+      'Content-Type': isForm ? 'multipart/form-data' : 'application/json',
+      ...headers
+    },
+    body: isForm ? data : JSON.stringify(data),
+    credentials: 'include'
+  };
+};
+
 class UploadService {
   private readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.paraspot.ai';
   private readonly CHUNK_SIZE = parseInt(import.meta.env.VITE_CHUNK_SIZE_BYTES || '5242880'); // 5MB default
@@ -8,53 +32,117 @@ class UploadService {
 
   private activeUploads = new Map<string, AbortController>();
 
-  async initUpload(inspectionId: string, filename: string, filesize: number): Promise<UploadInitResponse> {
-    const response = await fetch(`${this.API_BASE_URL}/api/inspections/${inspectionId}/uploads/init`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        filename,
-        filesize,
-        mime: 'video/mp4'
-      })
-    });
+  async fetchPresignedUrls(inspectionId: string, filename: string, totalParts: number, fileType: string, retryCount = 0): Promise<{ presigned_urls: string[] } | null> {
+    const data = {
+      total_parts: totalParts,
+      id: inspectionId,
+      filename: filename,
+      filetype: fileType,
+    };
 
-    if (!response.ok) {
-      throw new Error(`Upload init failed: ${response.status}`);
-    }
+    const onFail = (): Promise<{ presigned_urls: string[] } | null> => {
+      return new Promise((resolve) => {
+        setTimeout(async () => {
+          const result = await this.fetchPresignedUrls(inspectionId, filename, totalParts, fileType, retryCount + 1);
+          resolve(result);
+        }, 5000 + (retryCount * 2000));
+      });
+    };
 
-    return response.json();
-  }
-
-  async uploadPart(url: string, data: ArrayBuffer): Promise<string> {
-    const response = await fetch(url, {
-      method: 'PUT',
-      body: data,
-      headers: {
-        'Content-Type': 'application/octet-stream',
+    try {
+      const resp = await fetch(`${this.API_BASE_URL}/media/generate_presigned_url`, postReqOptBuilder(data));
+      const jsonResponse = await resp.json();
+      console.log("Presigned URL response:", jsonResponse);
+      
+      if (jsonResponse.status === 200) {
+        return {
+          presigned_urls: jsonResponse.result.presign_urls,
+        };
+      } else {
+        console.log("Failed generating presigned url");
+        if (retryCount < 5) {
+          return await onFail();
+        }
+        return null;
       }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Part upload failed: ${response.status}`);
+    } catch (error) {
+      console.error("An error occurred:", error);
+      if (retryCount < 5) {
+        return await onFail();
+      }
+      return null;
     }
-
-    return response.headers.get('etag') || '';
   }
 
-  async completeUpload(inspectionId: string, request: UploadCompleteRequest): Promise<void> {
-    const response = await fetch(`${this.API_BASE_URL}/api/inspections/${inspectionId}/uploads/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request)
-    });
+  async uploadFileChunk(presignedUrl: string, blob: Blob, retryCount = 0): Promise<boolean> {
+    if (retryCount > 0 && retryCount < 5) {
+      console.log("Checking network connection");
+      try {
+        const testResp = await fetch(this.API_BASE_URL, { credentials: "include" });
+        if (!testResp.ok) {
+          await delay(1000 + (retryCount * 1000));
+          return await this.uploadFileChunk(presignedUrl, blob, retryCount + 1);
+        }
+      } catch {
+        await delay(1000 + (retryCount * 1000));
+        return await this.uploadFileChunk(presignedUrl, blob, retryCount + 1);
+      }
+    } else if (retryCount === 5) {
+      console.log("Failed to upload chunk after 5 retries");
+      return false;
+    }
 
-    if (!response.ok) {
-      throw new Error(`Upload complete failed: ${response.status}`);
+    try {
+      const response = await fetch(presignedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+        body: blob,
+      });
+
+      if (response.ok) {
+        return true;
+      } else {
+        await delay(1000 + (retryCount * 1000));
+        return await this.uploadFileChunk(presignedUrl, blob, retryCount + 1);
+      }
+    } catch (error) {
+      console.error("Chunk upload failed:", error);
+      await delay(1000 + (retryCount * 1000));
+      return await this.uploadFileChunk(presignedUrl, blob, retryCount + 1);
+    }
+  }
+
+  async finalizeUpload(inspectionId: string, fileName: string, totalChunks: number): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/media/upload_video`, postReqOptBuilder({
+        expectedSize: totalChunks,
+        id: inspectionId,
+        filename: fileName
+      }));
+      
+      const jsonResponse = await response.json();
+      
+      if (jsonResponse.status === 200) {
+        // Send scan started notification
+        try {
+          await fetch(`${this.API_BASE_URL}/scan/scanStarted`, postReqOptBuilder(
+            inspectionId.includes('_') 
+              ? { pid: inspectionId.split("_")[2], scanType: 'checkout' }
+              : { pid: inspectionId, scanType: 'baseline' }
+          ));
+        } catch (error) {
+          console.error("Failed to send scanStarted notification:", error);
+        }
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Failed to finalize upload:", error);
+      return false;
     }
   }
 
@@ -64,10 +152,47 @@ class UploadService {
 
     try {
       storageService.updateUploadJob(jobId, { status: 'uploading', progress: 0 });
+      
+      // Get recorded blobs from storage (this would be from your video recording)
+      const recordedBlobs = await this.getRecordedBlobs(job.fileUri);
+      const totalChunks = recordedBlobs.length;
+      
+      if (totalChunks === 0) {
+        throw new Error('No video data found');
+      }
 
-      // For web demo, we'll simulate the upload process
-      // In a real implementation with Capacitor, you'd read the file using Filesystem API
-      await this.simulateUpload(jobId);
+      // Get presigned URLs
+      const urlResponse = await this.fetchPresignedUrls(
+        job.inspectionId, 
+        job.fileName, 
+        totalChunks, 
+        'video/mp4'
+      );
+
+      if (!urlResponse) {
+        throw new Error('Failed to get presigned URLs');
+      }
+
+      // Upload chunks with batch processing
+      const success = await this.uploadChunksWithBatching(
+        jobId,
+        recordedBlobs,
+        urlResponse.presigned_urls,
+        totalChunks
+      );
+
+      if (success) {
+        // Finalize upload
+        const finalized = await this.finalizeUpload(job.inspectionId, job.fileName, totalChunks);
+        
+        if (finalized) {
+          storageService.updateUploadJob(jobId, { status: 'completed', progress: 100 });
+        } else {
+          throw new Error('Failed to finalize upload');
+        }
+      } else {
+        throw new Error('Failed to upload chunks');
+      }
       
     } catch (error) {
       console.error('Upload failed:', error);
@@ -78,14 +203,61 @@ class UploadService {
     }
   }
 
-  private async simulateUpload(jobId: string): Promise<void> {
-    // Simulate progress for demo purposes
-    for (let progress = 0; progress <= 100; progress += 10) {
-      await new Promise(resolve => setTimeout(resolve, 300));
+  private async uploadChunksWithBatching(
+    jobId: string, 
+    recordedBlobs: Blob[], 
+    presignedUrls: string[], 
+    totalChunks: number
+  ): Promise<boolean> {
+    const BATCH_SIZE = 4;
+    const results: boolean[] = [];
+    let failsCount = 0;
+
+    while (results.length < totalChunks) {
+      if (!navigator.onLine) {
+        await delay(5000);
+        continue;
+      }
+
+      const batch: Array<{ presignedUrl: string; blob: Blob }> = [];
+      
+      for (let i = 0; i < BATCH_SIZE && results.length + i < totalChunks; i++) {
+        const chunkIndex = results.length + i;
+        batch.push({
+          presignedUrl: presignedUrls[chunkIndex],
+          blob: recordedBlobs[chunkIndex]
+        });
+      }
+
+      const batchResults = await Promise.all(
+        batch.map(({ presignedUrl, blob }) => this.uploadFileChunk(presignedUrl, blob))
+      );
+
+      const successCount = batchResults.filter(r => r === true).length;
+      results.push(...batchResults.filter(r => r === true));
+      failsCount += batchResults.filter(r => r === false).length;
+
+      // Update progress
+      const progress = Math.floor((results.length / totalChunks) * 100);
       storageService.updateUploadJob(jobId, { progress });
+
+      if (failsCount > 10) {
+        console.error("Too many failed chunks");
+        return false;
+      }
     }
+
+    return results.length === totalChunks;
+  }
+
+  private async getRecordedBlobs(fileUri: string): Promise<Blob[]> {
+    // For now, simulate with dummy data
+    // In a real implementation, you'd retrieve the actual recorded blobs
+    // This could be from IndexedDB, file system, or other storage
+    console.log('Getting recorded blobs for:', fileUri);
     
-    storageService.updateUploadJob(jobId, { status: 'completed', progress: 100 });
+    // Return empty array for now - you'll need to implement this based on your recording system
+    return [];
   }
 
   pauseUpload(jobId: string): void {
