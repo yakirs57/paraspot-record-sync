@@ -15,7 +15,7 @@ export function TopBar({ title, showLogo = true }: TopBarProps) {
               </div>
             </div>
             <span className="text-lg font-semibold text-foreground">
-              {title || 'Paraspot Lite'}
+              {title || 'Paraspot AI'}
             </span>
           </div>
         )}
