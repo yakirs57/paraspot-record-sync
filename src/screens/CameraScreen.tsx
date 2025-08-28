@@ -4,7 +4,7 @@ import { MobileButton } from "@/components/mobile/MobileButton";
 import { TopBar } from "@/components/mobile/TopBar";
 import { cameraService } from "@/services/CameraService";
 import { storageService } from "@/services/StorageService";
-import { ArrowLeft, FlipHorizontal, Zap, ZapOff, Circle, Square, Settings } from "lucide-react";
+import { Camera, Zap, ZapOff, Circle, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function CameraScreen() {
@@ -13,10 +13,11 @@ export function CameraScreen() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [hasBackCamera, setHasBackCamera] = useState<boolean | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [hasPermissions, setHasPermissions] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [cameraSettings, setCameraSettings] = useState(storageService.getCameraSettings());
+  const [settings, setSettings] = useState(storageService.getCameraSettings());
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout>();
@@ -37,33 +38,32 @@ export function CameraScreen() {
   }, [inspectionId, navigate]);
 
   const checkPermissions = async () => {
-    try {
-      const hasPerms = await cameraService.checkPermissions();
-      if (!hasPerms) {
-        const granted = await cameraService.requestPermissions();
-        setHasPermissions(granted);
-        if (!granted) {
-          toast({
-            title: "Camera Permission Required",
-            description: "Please allow camera access to record videos",
-            variant: "destructive"
-          });
-        }
-      } else {
-        setHasPermissions(true);
-      }
-    } catch (error) {
-      console.error('Permission check failed:', error);
+    const result = await cameraService.requestPermissions();
+    setHasPermission(result.hasPermission);
+    setHasBackCamera(result.hasBackCamera);
+    
+    if (result.hasPermission && result.hasBackCamera) {
       toast({
-        title: "Permission Error",
-        description: "Unable to access camera permissions",
+        title: "Camera Ready",
+        description: "You can now start recording",
+      });
+    } else if (!result.hasPermission) {
+      toast({
+        title: "Permission Required", 
+        description: "Camera and microphone access is needed",
+        variant: "destructive"
+      });
+    } else if (!result.hasBackCamera) {
+      toast({
+        title: "Back Camera Required",
+        description: "This app requires a back-facing camera",
         variant: "destructive"
       });
     }
   };
 
   const startRecording = async () => {
-    if (!videoRef.current || !hasPermissions) return;
+    if (!videoRef.current || !hasPermission || !hasBackCamera) return;
     
     try {
       await cameraService.startRecording(videoRef.current);
@@ -125,30 +125,11 @@ export function CameraScreen() {
     }
   };
 
-  const switchCamera = async () => {
-    try {
-      await cameraService.switchCamera();
-      const newSettings = storageService.getCameraSettings();
-      setCameraSettings(newSettings);
-      toast({
-        title: "Camera Switched",
-        description: `Using ${newSettings.camera} camera`,
-      });
-    } catch (error) {
-      console.error('Failed to switch camera:', error);
-    }
-  };
-
   const toggleFlash = () => {
-    const newFlash = cameraSettings.flash === 'off' ? 'on' : 'off';
-    const newSettings = { ...cameraSettings, flash: newFlash };
+    const newFlash = settings.flash === 'on' ? 'off' : 'on';
+    const newSettings = { ...settings, flash: newFlash };
+    setSettings(newSettings);
     storageService.saveCameraSettings(newSettings);
-    setCameraSettings(newSettings);
-    
-    toast({
-      title: "Flash Updated",
-      description: `Flash ${newFlash}`,
-    });
   };
 
   const formatTime = (seconds: number): string => {
@@ -157,25 +138,91 @@ export function CameraScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!hasPermissions) {
+  // Show permission request screen
+  if (hasPermission === false) {
     return (
-      <div className="mobile-container safe-area-top flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <h2 className="text-xl font-bold">Camera Access Needed</h2>
-          <p className="text-muted-foreground">Please allow camera permissions to record videos</p>
-          <MobileButton onClick={checkPermissions}>
-            Check Permissions
+      <div className="h-screen bg-background flex flex-col">
+        <TopBar 
+          title="Camera Access" 
+          showBack 
+          onBack={() => navigate('/')}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+            <Camera className="w-8 h-8 text-destructive" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Camera Permission Required</h2>
+          <p className="text-muted-foreground mb-6">
+            We need access to your camera and microphone to record inspection videos. Please enable camera and microphone permissions in your browser settings.
+          </p>
+          <MobileButton 
+            onClick={checkPermissions}
+            className="w-full mb-3"
+          >
+            Try Again
           </MobileButton>
-          <MobileButton variant="ghost" onClick={() => navigate('/')}>
-            Back to Home
+          <MobileButton 
+            variant="outline" 
+            onClick={() => navigate('/')}
+            className="w-full"
+          >
+            Return to Home
           </MobileButton>
         </div>
       </div>
     );
   }
 
+  // Show back camera required screen
+  if (hasBackCamera === false) {
+    return (
+      <div className="h-screen bg-background flex flex-col">
+        <TopBar 
+          title="Camera Required" 
+          showBack 
+          onBack={() => navigate('/')}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+            <Camera className="w-8 h-8 text-destructive" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Back Camera Required</h2>
+          <p className="text-muted-foreground mb-6">
+            This app requires a back-facing camera to record inspection videos. Your device doesn't have a compatible back camera.
+          </p>
+          <MobileButton 
+            variant="outline" 
+            onClick={() => navigate('/')}
+            className="w-full"
+          >
+            Return to Home
+          </MobileButton>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (hasPermission === null || hasBackCamera === null) {
+    return (
+      <div className="h-screen bg-background flex flex-col">
+        <TopBar 
+          title="Camera" 
+          showBack 
+          onBack={() => navigate('/')}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Checking camera...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 bg-black safe-area-top safe-area-bottom">
+    <div className="fixed inset-0 bg-black">
       {/* Video Preview */}
       <div className="relative flex-1 h-full">
         <video
@@ -187,31 +234,12 @@ export function CameraScreen() {
         />
         
         {/* Top Controls */}
-        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/50 to-transparent">
-          <div className="flex items-center justify-between text-white">
-            <button 
-              onClick={() => navigate('/')}
-              className="p-2 rounded-full bg-black/30"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            
-            <div className="text-center">
-              <p className="font-semibold">{inspectionId}</p>
-              {isRecording && (
-                <p className="text-sm text-red-300 font-mono">
-                  REC {formatTime(recordingTime)}
-                </p>
-              )}
-            </div>
-            
-            <button 
-              onClick={switchCamera}
-              className="p-2 rounded-full bg-black/30"
-            >
-              <FlipHorizontal size={24} />
-            </button>
-          </div>
+        <div className="absolute top-0 left-0 right-0 z-10">
+          <TopBar 
+            title="Recording" 
+            showBack 
+            onBack={() => navigate('/')}
+          />
         </div>
 
         {/* Bottom Controls */}
@@ -222,7 +250,7 @@ export function CameraScreen() {
               onClick={toggleFlash}
               className="p-3 rounded-full bg-black/30 text-white"
             >
-              {cameraSettings.flash === 'on' ? <Zap size={24} /> : <ZapOff size={24} />}
+              {settings.flash === 'on' ? <Zap size={24} /> : <ZapOff size={24} />}
             </button>
 
             {/* Record Button */}
@@ -241,10 +269,8 @@ export function CameraScreen() {
               )}
             </button>
 
-            {/* Settings placeholder */}
-            <div className="p-3 rounded-full opacity-50">
-              <Settings size={24} className="text-white" />
-            </div>
+            {/* Spacer for balance */}
+            <div className="w-12 h-12" />
           </div>
         </div>
 
@@ -252,9 +278,16 @@ export function CameraScreen() {
         {isRecording && (
           <div className="absolute top-20 left-4 flex items-center gap-2 px-3 py-1 bg-red-600 rounded-full">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-white text-sm font-medium">Recording</span>
+            <span className="text-white text-sm font-medium">
+              Recording {formatTime(recordingTime)}
+            </span>
           </div>
         )}
+
+        {/* Inspection ID Display */}
+        <div className="absolute top-20 right-4 px-3 py-1 bg-black/50 rounded-full">
+          <span className="text-white text-sm font-medium">{inspectionId}</span>
+        </div>
       </div>
     </div>
   );

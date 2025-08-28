@@ -9,26 +9,43 @@ class CameraService {
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
 
-  async checkPermissions(): Promise<boolean> {
+  async checkPermissions(): Promise<{ hasPermission: boolean; hasBackCamera: boolean }> {
     try {
-      // For web, check navigator permissions
-      const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      return result.state === 'granted';
-    } catch {
-      return false;
-    }
-  }
-
-  async requestPermissions(): Promise<boolean> {
-    try {
+      // Check if we can access camera and specifically back camera
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
+        video: { facingMode: 'environment' }, 
         audio: true 
       });
       stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch {
-      return false;
+      return { hasPermission: true, hasBackCamera: true };
+    } catch (error: any) {
+      // Check if it's a permission error or no back camera
+      if (error.name === 'NotAllowedError') {
+        return { hasPermission: false, hasBackCamera: true };
+      }
+      if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
+        return { hasPermission: true, hasBackCamera: false };
+      }
+      return { hasPermission: false, hasBackCamera: false };
+    }
+  }
+
+  async requestPermissions(): Promise<{ hasPermission: boolean; hasBackCamera: boolean }> {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }, 
+        audio: true 
+      });
+      stream.getTracks().forEach(track => track.stop());
+      return { hasPermission: true, hasBackCamera: true };
+    } catch (error: any) {
+      if (error.name === 'NotAllowedError') {
+        return { hasPermission: false, hasBackCamera: true };
+      }
+      if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
+        return { hasPermission: true, hasBackCamera: false };
+      }
+      return { hasPermission: false, hasBackCamera: false };
     }
   }
 
@@ -43,7 +60,7 @@ class CameraService {
           width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
           height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
           frameRate: settings.frameRate,
-          facingMode: settings.camera === 'front' ? 'user' : 'environment'
+          facingMode: 'environment' // Always use back camera
         },
         audio: true
       });
@@ -119,17 +136,7 @@ class CameraService {
     return this.isRecording;
   }
 
-  async switchCamera(): Promise<void> {
-    const settings = storageService.getCameraSettings();
-    const newCamera = settings.camera === 'front' ? 'back' : 'front';
-    storageService.saveCameraSettings({ ...settings, camera: newCamera });
-    
-    // Restart stream with new camera
-    if (this.videoStream && !this.isRecording) {
-      this.videoStream.getTracks().forEach(track => track.stop());
-      // Would restart with new settings
-    }
-  }
+  // Camera switching removed - only back camera supported
 }
 
 export const cameraService = new CameraService();
