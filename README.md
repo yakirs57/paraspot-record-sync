@@ -1,4 +1,4 @@
-# Paraspot Lite Mobile App
+# Paraspot AI Mobile App
 
 Professional inspection video recording and upload app for iOS and Android. Built with React, TypeScript, Tailwind CSS, and Capacitor for cross-platform mobile deployment.
 
