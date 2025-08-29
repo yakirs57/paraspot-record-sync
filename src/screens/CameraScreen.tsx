@@ -295,7 +295,7 @@ export function CameraScreen() {
         )}
 
         {/* Inspection ID Display */}
-        <div className="absolute top-20 right-4 px-3 py-1 bg-black/50 rounded-full">
+        <div className="absolute top-4 right-4 m-4 px-3 py-1 bg-black/50 rounded-full">
           <span className="text-white text-sm font-medium">{inspectionId}</span>
         </div>
       </div>
