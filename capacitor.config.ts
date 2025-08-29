@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.9961a020850f4c489072671abe7cc755',
+  appId: 'com.lovable.paraspot',
   appName: 'Paraspot AI',
   webDir: 'dist',
   server: {
