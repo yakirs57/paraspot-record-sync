@@ -29,6 +29,7 @@ export interface UploadJob {
     sent: boolean;
   }>;
   error?: string;
+  notificationId?: number;
 }
 
 export interface CameraSettings {

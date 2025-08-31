@@ -1,3 +1,4 @@
+
 import { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
@@ -14,6 +15,11 @@ const config: CapacitorConfig = {
     },
     FileSystem: {
       permissions: ['storage'],
+    },
+    LocalNotifications: {
+      smallIcon: "ic_stat_icon_config_sample",
+      iconColor: "#488AFF",
+      sound: "beep.wav",
     }
   }
 };
