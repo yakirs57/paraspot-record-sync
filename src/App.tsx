@@ -15,12 +15,12 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Temporarily disable background upload service initialization
-    // backgroundUploadService.initialize();
+    // Initialize background upload service
+    backgroundUploadService.initialize();
     
     // Cleanup when app unmounts
     return () => {
-      // backgroundUploadService.stopProcessing();
+      backgroundUploadService.stopProcessing();
     };
   }, []);
 

@@ -260,6 +260,10 @@ class UploadService {
     return results.length === totalChunks;
   }
 
+  async getFileChunks(fileUri: string): Promise<Blob[]> {
+    return this.getRecordedBlobs(fileUri);
+  }
+
   private async getRecordedBlobs(fileUri: string): Promise<Blob[]> {
     try {
       // Read the video file from filesystem
