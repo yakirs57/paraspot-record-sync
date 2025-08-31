@@ -1,12 +1,12 @@
 
-import { BackgroundTask } from '@capacitor/background-task';
+import { App } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { uploadService } from './UploadService';
 import { storageService } from './StorageService';
 import { UploadJob } from '../types';
 
 class BackgroundUploadService {
-  private backgroundTaskId?: string;
+  private intervalId?: NodeJS.Timeout;
   private isProcessing = false;
   private notificationId = 1000;
 
@@ -16,6 +16,14 @@ class BackgroundUploadService {
     
     // Start processing queue
     this.startProcessing();
+    
+    // Handle app state changes
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) {
+        // App went to background, continue processing
+        this.startProcessing();
+      }
+    });
   }
 
   async startProcessing() {
@@ -23,18 +31,13 @@ class BackgroundUploadService {
     
     this.isProcessing = true;
     
-    // Start background task
-    this.backgroundTaskId = await BackgroundTask.beforeExit(async () => {
-      console.log('Background task started for uploads');
-      await this.processUploadQueue();
-      
-      if (this.backgroundTaskId) {
-        BackgroundTask.finish({ taskId: this.backgroundTaskId });
-      }
-    });
-
     // Process uploads immediately
     this.processUploadQueue();
+    
+    // Set up interval for continuous processing
+    this.intervalId = setInterval(() => {
+      this.processUploadQueue();
+    }, 10000); // Check every 10 seconds
   }
 
   private async processUploadQueue() {
@@ -167,9 +170,9 @@ class BackgroundUploadService {
   stopProcessing() {
     this.isProcessing = false;
     
-    if (this.backgroundTaskId) {
-      BackgroundTask.finish({ taskId: this.backgroundTaskId });
-      this.backgroundTaskId = undefined;
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = undefined;
     }
   }
 }
