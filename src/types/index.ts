@@ -1,11 +1,19 @@
 export interface InspectionRecord {
   id: string;
+  scan_id: string;
+  type: string;
+  cbeName: string;
+  pid: string;
+  clientLogoURL: string;
+  clientName: string;
+  unitAddress: string;
   lastUsedAt: number;
 }
 
 export interface UploadJob {
   id: string;
   inspectionId: string;
+  inspectionRecord: InspectionRecord;
   fileUri: string;
   fileName: string;
   size: number;

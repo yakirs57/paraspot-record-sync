@@ -9,9 +9,12 @@ import { storageService } from "@/services/StorageService";
 import { InspectionRecord, UploadJob } from "@/types";
 import { Video, Upload, Clock, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { error } from "console";
 
 export function HomeScreen() {
+  const MAX_RECENT_INSPECTIONS = 5;
   const [inspectionInput, setInspectionInput] = useState("");
+  const [loadingInspectionAuth, setLoadingInspectionAuth] = useState(false);
   const [recentInspections, setRecentInspections] = useState<InspectionRecord[]>([]);
   const [uploadQueue, setUploadQueue] = useState<UploadJob[]>([]);
   const navigate = useNavigate();
@@ -22,41 +25,100 @@ export function HomeScreen() {
   }, []);
 
   const loadData = () => {
-    setRecentInspections(storageService.getRecentInspections());
+    setRecentInspections(storageService.getRecentInspections().slice(0, MAX_RECENT_INSPECTIONS));
     setUploadQueue(storageService.getUploadQueue());
   };
 
-  const parseInspectionId = (input: string): string | null => {
+  const parseInspectionURL = (input: string): { scan_id: string; inspection_type: string; cbe_name: string; extra_params: Record<string, string> } | null => {
     if (!input.trim()) return null;
-    
+
     // Check if it's a URL
     try {
       const url = new URL(input);
-      const match = url.pathname.match(/\/i\/([A-Z0-9]+)/);
-      if (match) return match[1];
-    } catch {
-      // Not a URL, check if it's a valid ID format
-      if (/^[A-Z0-9]{3,20}$/.test(input.trim().toUpperCase())) {
-        return input.trim().toUpperCase();
+      const extra_params: Record<string, string> = {};
+      url.searchParams.forEach((value, key) => {
+        extra_params[key] = value;
+      });
+      // /inspection/:inspection_type/:cbe_name/:scan_id
+      const match = url.pathname.match(
+        /^\/inspection\/([^/]+)\/([^/]+)\/([^/]+)/
+      );
+      if (match) {
+        const [, inspection_type, cbe_name, scan_id] = match;
+        // You can now use inspection_type, cbe_name, scan_id as needed
+        return { scan_id, inspection_type, cbe_name, extra_params };
       }
+    } catch {
+      // Not a URL
+      return null;
     }
-    
+    // Not a match
     return null;
-  };
+  }
 
   const handleStartInspection = () => {
-    const inspectionId = parseInspectionId(inspectionInput);
-    if (!inspectionId) {
+    setLoadingInspectionAuth(true);
+    const { scan_id, inspection_type, cbe_name, extra_params } = parseInspectionURL(inspectionInput) || { scan_id: null, inspection_type: null, cbe_name: null, extra_params: {} };
+
+    if (!scan_id) {
       toast({
         title: "Invalid Input",
         description: "Please enter a valid inspection ID or link",
         variant: "destructive"
       });
+      setLoadingInspectionAuth(false);
       return;
     }
 
-    storageService.addRecentInspection(inspectionId);
-    navigate(`/camera?inspection=${inspectionId}`);
+    fetch("https://www.paraspot.ai/api/scan/authenticateScan", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ 'scanID': scan_id, 'clientBeName': cbe_name, 'inspectionType': inspection_type })
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.message || "Invalid inspection ID or link");
+        }
+        return res.json();
+      })
+      .then((res) => {
+        if (res.status === 200) {
+          const inspectionData = {
+            pid: res.result.pid,
+            clientLogoURL: res.result.logo,
+            clientName: res.result.name,
+            unitAddress: res.result.address,
+            id: storageService.getInspectionId(scan_id, inspection_type, cbe_name),
+            scan_id: scan_id,
+            type: inspection_type,
+            cbeName: cbe_name,
+            lastUsedAt: null
+          };
+          storageService.addRecentInspection(inspectionData);
+          // Build query params including extra_params
+          const params = new URLSearchParams({
+            scan_id,
+            inspection_type,
+            cbe_name,
+            ...extra_params
+          }).toString();
+          navigate(`/camera?${params}`);
+          setLoadingInspectionAuth(false);
+        } else {
+          throw new Error(res.message || "Authentication failed");
+        }
+      })
+      .catch((err) => {
+        toast({
+          title: "Authentication Failed",
+          description: err.message || "Could not authenticate scan",
+          variant: "destructive"
+        });
+        setLoadingInspectionAuth(false);
+      });
   };
 
   const handleRecentInspectionTap = (inspectionId: string) => {
@@ -77,7 +139,7 @@ export function HomeScreen() {
     navigate("/upload-queue");
   };
 
-  const isValidInput = parseInspectionId(inspectionInput) !== null;
+  const isValidInput = parseInspectionURL(inspectionInput) !== null;
 
   return (
     <div className="min-h-screen bg-background">

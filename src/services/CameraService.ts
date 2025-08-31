@@ -18,7 +18,7 @@ class CameraService {
       });
       stream.getTracks().forEach(track => track.stop());
       return { hasPermission: true, hasBackCamera: true };
-    } catch (error: any) {
+    } catch (error) {
       // Check if it's a permission error or no back camera
       if (error.name === 'NotAllowedError') {
         return { hasPermission: false, hasBackCamera: true };
@@ -38,7 +38,7 @@ class CameraService {
       });
       stream.getTracks().forEach(track => track.stop());
       return { hasPermission: true, hasBackCamera: true };
-    } catch (error: any) {
+    } catch (error) {
       if (error.name === 'NotAllowedError') {
         return { hasPermission: false, hasBackCamera: true };
       }
@@ -49,7 +49,7 @@ class CameraService {
     }
   }
 
-  async startRecording(videoElement: HTMLVideoElement): Promise<void> {
+  async startRecording(videoElement: HTMLVideoElement, audioSupport: boolean): Promise<void> {
     if (this.isRecording) return;
 
     const settings = storageService.getCameraSettings();
@@ -62,7 +62,7 @@ class CameraService {
           frameRate: settings.frameRate,
           facingMode: 'environment' // Always use back camera
         },
-        audio: true
+        audio: audioSupport
       });
 
       videoElement.srcObject = this.videoStream;
@@ -114,6 +114,7 @@ class CameraService {
               const job: UploadJob = {
                 id: `job_${Date.now()}`,
                 inspectionId,
+                inspectionRecord: storageService.getInspectionData(inspectionId),
                 fileUri: filePath, // Store filesystem path instead of blob URL
                 fileName: filename,
                 size: blob.size,

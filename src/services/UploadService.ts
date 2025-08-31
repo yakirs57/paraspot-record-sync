@@ -14,7 +14,7 @@ const delay = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
-const postReqOptBuilder = (data: any, isForm = false, headers = {}): RequestInit => {
+const postReqOptBuilder = (data, isForm = false, headers = {}): RequestInit => {
   return {
     method: 'POST',
     headers: {

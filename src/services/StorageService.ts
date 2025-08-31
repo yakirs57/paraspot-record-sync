@@ -3,6 +3,7 @@ import { InspectionRecord, UploadJob } from '../types';
 class StorageService {
   private readonly RECENT_INSPECTIONS_KEY = 'recent_inspections';
   private readonly UPLOAD_QUEUE_KEY = 'upload_queue';
+  private readonly MAX_RECENT_INSPECTIONS = 10;
 
   // Recent Inspections Management
   getRecentInspections(): InspectionRecord[] {
@@ -14,23 +15,47 @@ class StorageService {
     }
   }
 
-  addRecentInspection(inspectionId: string): void {
+  getInspectionId(scanId: string, inspectionType: string, cbeName: string): string | null {
+    if (!scanId || !inspectionType || !cbeName) return null;
+
+    // Create a unique ID based on the inspection details
+    return `${inspectionType}:${cbeName}:${scanId}`;
+  }
+
+  getInspectionData(id: string): InspectionRecord {
+    try {
+      const records = this.getRecentInspections();
+      const found = records.find(r => r.id === id);
+      return found ? found : null;
+    } catch {
+      return null;
+    }
+  }
+
+  addRecentInspection({pid, scan_id, clientLogoURL, clientName, unitAddress, id, type, cbeName}: InspectionRecord): void {
     const records = this.getRecentInspections();
-    const existing = records.find(r => r.id === inspectionId);
+    const existing = records.find(r => r.id === id);
 
     if (existing) {
       existing.lastUsedAt = Date.now();
     } else {
       records.unshift({
-        id: inspectionId,
+        pid,
+        scan_id,
+        clientLogoURL,
+        clientName,
+        unitAddress,
+        type,
+        cbeName,
+        id,
         lastUsedAt: Date.now()
       });
     }
 
-    // Keep only last 5
+    // Keep only last MAX_RECENT_INSPECTIONS
     const updated = records
       .sort((a, b) => b.lastUsedAt - a.lastUsedAt)
-      .slice(0, 5);
+      .slice(0, this.MAX_RECENT_INSPECTIONS);
 
     localStorage.setItem(this.RECENT_INSPECTIONS_KEY, JSON.stringify(updated));
   }
@@ -93,7 +118,7 @@ class StorageService {
     }
   }
 
-  saveCameraSettings(settings: any): void {
+  saveCameraSettings(settings): void {
     localStorage.setItem('camera_settings', JSON.stringify(settings));
   }
 }

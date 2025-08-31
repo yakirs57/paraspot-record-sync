@@ -9,7 +9,18 @@ import { useToast } from "@/hooks/use-toast";
 
 export function CameraScreen() {
   const [searchParams] = useSearchParams();
-  const inspectionId = searchParams.get('inspection');
+  const scanId = searchParams.get('scan_id');
+  const inspectionType = searchParams.get('inspection_type');
+  const cbeName = searchParams.get('cbe_name');
+  const debugMode = searchParams.get('debug') === '1';
+  const autoApply = searchParams.get('auto_apply');
+  const redirectURL = searchParams.get('redirect_url');
+  const teamInspectionArg = searchParams.get('team_inspection') === '1';
+  const audioSupport = searchParams.get('audio_support') === '1';
+  
+  const inspectionId = storageService.getInspectionId(scanId, inspectionType, cbeName);
+  const inspectionData = storageService.getInspectionData(inspectionId);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -66,7 +77,7 @@ export function CameraScreen() {
     if (!videoRef.current || !hasPermission || !hasBackCamera) return;
     
     try {
-      await cameraService.startRecording(videoRef.current);
+      await cameraService.startRecording(videoRef.current, audioSupport);
       setIsRecording(true);
       setRecordingTime(0);
       
