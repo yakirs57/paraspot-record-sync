@@ -8,7 +8,7 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
-import com.getcapacitor.CapacitorPlugin;
+import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "BackgroundUploader")
 public class BackgroundUploaderPlugin extends Plugin {
