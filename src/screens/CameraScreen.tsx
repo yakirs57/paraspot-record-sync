@@ -54,10 +54,23 @@ export function CameraScreen() {
     setHasBackCamera(result.hasBackCamera);
     
     if (result.hasPermission && result.hasBackCamera) {
-      toast({
-        title: "Camera Ready",
-        description: "You can now start recording",
-      });
+      // Open camera immediately when permissions are granted
+      if (videoRef.current) {
+        try {
+          await cameraService.openCamera(videoRef.current, audioSupport);
+          toast({
+            title: "Camera Ready",
+            description: "You can now start recording",
+          });
+        } catch (error) {
+          console.error('Failed to open camera:', error);
+          toast({
+            title: "Camera Error",
+            description: "Unable to open camera. Please try again.",
+            variant: "destructive"
+          });
+        }
+      }
     } else if (!result.hasPermission) {
       toast({
         title: "Permission Required", 
@@ -74,10 +87,10 @@ export function CameraScreen() {
   };
 
   const startRecording = async () => {
-    if (!videoRef.current || !hasPermission || !hasBackCamera) return;
+    if (!hasPermission || !hasBackCamera) return;
     
     try {
-      await cameraService.startRecording(videoRef.current, audioSupport);
+      await cameraService.startRecording();
       setIsRecording(true);
       setRecordingTime(0);
       

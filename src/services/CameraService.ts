@@ -94,13 +94,13 @@ class CameraService {
     }
   }
 
-  async startRecording(videoElement: HTMLVideoElement, audioSupport: boolean): Promise<void> {
-    if (this.isRecording) return;
+  async openCamera(videoElement: HTMLVideoElement, audioSupport: boolean): Promise<void> {
+    if (this.videoStream) return; // Camera already open
 
     const settings = storageService.getCameraSettings();
     
     try {
-      console.log('Starting recording with settings:', settings);
+      console.log('Opening camera with settings:', settings);
       console.log('Audio support:', audioSupport);
       console.log('Is native platform:', Capacitor.isNativePlatform());
       
@@ -117,6 +117,19 @@ class CameraService {
 
       console.log('Got video stream:', this.videoStream);
       videoElement.srcObject = this.videoStream;
+      console.log('Camera opened successfully');
+      
+    } catch (error) {
+      console.error('Failed to open camera:', error);
+      throw error;
+    }
+  }
+
+  async startRecording(): Promise<void> {
+    if (this.isRecording || !this.videoStream) return;
+
+    try {
+      console.log('Starting recording...');
       
       this.recordedChunks = [];
       this.mediaRecorder = new MediaRecorder(this.videoStream);
