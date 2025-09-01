@@ -122,7 +122,8 @@ export function HomeScreen() {
   };
 
   const handleRecentInspectionTap = (inspectionId: string) => {
-    setInspectionInput(inspectionId);
+    const inspectionURL = "https://www.paraspot.ai/inspection/" + inspectionId.replace(/:/g, "/");
+    setInspectionInput(inspectionURL);
   };
 
   const handleRemoveRecentInspection = (inspectionId: string, e: React.MouseEvent) => {
@@ -195,7 +196,12 @@ export function HomeScreen() {
                   onClick={() => handleRecentInspectionTap(inspection.id)}
                   className="flex items-center justify-between p-4"
                 >
-                  <span className="font-medium">{inspection.id}</span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{inspection.unitAddress.slice(0, 20)}{inspection.unitAddress.length > 20 ? '...' : ''}</span>
+                    <span className="text-xs text-muted-foreground mt-1">
+                      {new Date(inspection.lastUsedAt).toLocaleString()}
+                    </span>
+                  </div>
                   <button
                     onClick={(e) => handleRemoveRecentInspection(inspection.id, e)}
                     className="p-1 text-muted-foreground hover:text-destructive"

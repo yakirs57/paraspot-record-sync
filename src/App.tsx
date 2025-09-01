@@ -17,7 +17,14 @@ const App = () => {
   useEffect(() => {
     // Initialize background upload service
     backgroundUploadService.initialize();
-    
+
+    // Request permissions to the camera and microphone
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).catch((err) => {
+        console.warn("Camera/Microphone permission denied or not available:", err);
+      });
+    }
+
     // Cleanup when app unmounts
     return () => {
       backgroundUploadService.stopProcessing();

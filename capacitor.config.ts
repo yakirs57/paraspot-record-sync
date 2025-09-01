@@ -5,10 +5,10 @@ const config: CapacitorConfig = {
   appId: 'com.paraspot.ai',
   appName: 'Paraspot AI',
   webDir: 'dist',
-  server: {
-    url: 'https://www.paraspot.ai',
-    cleartext: true
-  },
+  // server: {
+  //   url: 'https://www.paraspot.ai',
+  //   cleartext: true
+  // },
   plugins: {
     Camera: {
       permissions: ['camera', 'microphone'],

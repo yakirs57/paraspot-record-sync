@@ -45,5 +45,12 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to take photos/videos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access to record audio.</string>
+	<!-- If you save to Photos -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Allow saving captured media to your photo library.</string>
 </dict>
 </plist>

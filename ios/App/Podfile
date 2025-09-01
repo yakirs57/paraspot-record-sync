@@ -17,6 +17,7 @@ def capacitor_pods
   pod 'CapacitorFilesystem', :path => '../../node_modules/@capacitor/filesystem'
   pod 'CapacitorLocalNotifications', :path => '../../node_modules/@capacitor/local-notifications'
   pod 'CapacitorNetwork', :path => '../../node_modules/@capacitor/network'
+  pod 'CapacitorPushNotifications', :path => '../../node_modules/@capacitor/push-notifications'
   pod 'CapacitorBackgroundUploader', :path => '../../capacitor-background-uploader'
 end
 
