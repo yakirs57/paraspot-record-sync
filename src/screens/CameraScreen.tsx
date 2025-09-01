@@ -297,7 +297,7 @@ export function CameraScreen() {
 
         {/* Inspection ID Display */}
         <div className="fixed top-20 right-4 px-3 py-1 bg-black/50 rounded-full">
-          <span className="text-white text-sm font-medium">{inspectionId}</span>
+          <span className="text-white text-sm font-medium">{inspectionData.unitAddress.slice(0, 15)}{inspectionData.unitAddress.length > 15 ? '...' : ''}</span>
         </div>
       </div>
     </div>

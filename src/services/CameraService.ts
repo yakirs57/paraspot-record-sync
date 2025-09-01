@@ -147,7 +147,7 @@ class CameraService {
       this.mediaRecorder.onstop = async () => {
         try {
           const blob = new Blob(this.recordedChunks, { type: 'video/mp4' });
-          const filename = `inspection_${inspectionId}_${Date.now()}.mp4`;
+          const filename = `inspection_${inspectionId.split(":").slice(-1)[0]}_${Date.now()}.mp4`;
           const filePath = `videos/${filename}`;
           
           // Convert blob to base64 for filesystem storage
