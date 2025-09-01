@@ -49,7 +49,9 @@ export function CameraScreen() {
   }, [inspectionId, navigate]);
 
   const checkPermissions = async () => {
+    console.log('Checking camera permissions...');
     const result = await cameraService.requestPermissions();
+    console.log('Permission result:', result);
     setHasPermission(result.hasPermission);
     setHasBackCamera(result.hasBackCamera);
     
@@ -57,7 +59,9 @@ export function CameraScreen() {
       // Open camera immediately when permissions are granted
       if (videoRef.current) {
         try {
+          console.log('Opening camera with video element:', videoRef.current);
           await cameraService.openCamera(videoRef.current, audioSupport);
+          console.log('Camera opened successfully');
           toast({
             title: "Camera Ready",
             description: "You can now start recording",
@@ -70,14 +74,18 @@ export function CameraScreen() {
             variant: "destructive"
           });
         }
+      } else {
+        console.error('Video element not available');
       }
     } else if (!result.hasPermission) {
+      console.log('Permission denied');
       toast({
         title: "Permission Required", 
         description: "Camera and microphone access is needed",
         variant: "destructive"
       });
     } else if (!result.hasBackCamera) {
+      console.log('Back camera not available');
       toast({
         title: "Back Camera Required",
         description: "This app requires a back-facing camera",

@@ -9,7 +9,7 @@ import { storageService } from "@/services/StorageService";
 import { InspectionRecord, UploadJob } from "@/types";
 import { Video, Upload, Clock, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { error } from "console";
+
 
 export function HomeScreen() {
   const MAX_RECENT_INSPECTIONS = 5;
@@ -199,7 +199,7 @@ export function HomeScreen() {
                   <div className="flex flex-col">
                     <span className="font-medium">{inspection.unitAddress.slice(0, 20)}{inspection.unitAddress.length > 20 ? '...' : ''}</span>
                     <span className="text-xs text-muted-foreground mt-1">
-                      {new Date(inspection.lastUsedAt).toLocaleString()}
+                      {inspection.lastUsedAt ? new Date(inspection.lastUsedAt).toLocaleString() : 'Never used'}
                     </span>
                   </div>
                   <button
