@@ -21,6 +21,12 @@ export function CameraScreen() {
   const inspectionId = storageService.getInspectionId(scanId, inspectionType, cbeName);
   const inspectionData = storageService.getInspectionData(inspectionId);
   
+  console.log('CameraScreen - scanId:', scanId);
+  console.log('CameraScreen - inspectionType:', inspectionType);
+  console.log('CameraScreen - cbeName:', cbeName);
+  console.log('CameraScreen - inspectionId:', inspectionId);
+  console.log('CameraScreen - inspectionData:', inspectionData);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -39,9 +45,13 @@ export function CameraScreen() {
       return;
     }
     
-    checkPermissions();
+    // Delay permission check to ensure video element is ready
+    const timer = setTimeout(() => {
+      checkPermissions();
+    }, 100);
     
     return () => {
+      clearTimeout(timer);
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }

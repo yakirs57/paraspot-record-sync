@@ -95,7 +95,11 @@ class CameraService {
   }
 
   async openCamera(videoElement: HTMLVideoElement, audioSupport: boolean): Promise<void> {
-    if (this.videoStream) return; // Camera already open
+    if (this.videoStream) {
+      console.log('Camera already open, reusing stream');
+      videoElement.srcObject = this.videoStream;
+      return;
+    }
 
     const settings = storageService.getCameraSettings();
     
@@ -103,6 +107,7 @@ class CameraService {
       console.log('Opening camera with settings:', settings);
       console.log('Audio support:', audioSupport);
       console.log('Is native platform:', Capacitor.isNativePlatform());
+      console.log('Video element:', videoElement);
       
       // Use getUserMedia for both web and native platforms since Capacitor WebView supports it
       this.videoStream = await navigator.mediaDevices.getUserMedia({
@@ -116,8 +121,20 @@ class CameraService {
       });
 
       console.log('Got video stream:', this.videoStream);
+      console.log('Video stream tracks:', this.videoStream.getTracks());
+      
       videoElement.srcObject = this.videoStream;
-      console.log('Camera opened successfully');
+      
+      // Wait for video to load
+      await new Promise((resolve, reject) => {
+        videoElement.onloadedmetadata = () => {
+          console.log('Video metadata loaded');
+          videoElement.play().then(resolve).catch(reject);
+        };
+        videoElement.onerror = reject;
+      });
+      
+      console.log('Camera opened and playing successfully');
       
     } catch (error) {
       console.error('Failed to open camera:', error);
