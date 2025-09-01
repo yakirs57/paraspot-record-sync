@@ -7,8 +7,8 @@ import androidx.work.WorkManager;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
-import com.getcapacitor.annotation.CapacitorPlugin;
-import com.getcapacitor.annotation.PluginMethod;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.CapacitorPlugin;
 
 @CapacitorPlugin(name = "BackgroundUploader")
 public class BackgroundUploaderPlugin extends Plugin {
