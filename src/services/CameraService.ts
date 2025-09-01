@@ -15,6 +15,7 @@ class CameraService {
       if (Capacitor.isNativePlatform()) {
         // Use Capacitor Camera plugin for native platforms
         const permissions = await Camera.checkPermissions();
+        console.log('Camera permissions check result:', permissions);
         return { 
           hasPermission: permissions.camera === 'granted', 
           hasBackCamera: true // Assume back camera exists on mobile devices
@@ -29,6 +30,7 @@ class CameraService {
         return { hasPermission: true, hasBackCamera: true };
       }
     } catch (error) {
+      console.error('Camera permission check error:', error);
       if (Capacitor.isNativePlatform()) {
         return { hasPermission: false, hasBackCamera: true };
       } else {
@@ -47,12 +49,26 @@ class CameraService {
   async requestPermissions(): Promise<{ hasPermission: boolean; hasBackCamera: boolean }> {
     try {
       if (Capacitor.isNativePlatform()) {
-        // Request permissions using Capacitor Camera plugin
-        const permissions = await Camera.requestPermissions();
-        return { 
-          hasPermission: permissions.camera === 'granted', 
-          hasBackCamera: true
-        };
+        console.log('Requesting camera permissions on native platform...');
+        // First check current permissions
+        const currentPermissions = await Camera.checkPermissions();
+        console.log('Current permissions:', currentPermissions);
+        
+        if (currentPermissions.camera !== 'granted') {
+          // Request permissions using Capacitor Camera plugin
+          console.log('Requesting new permissions...');
+          const permissions = await Camera.requestPermissions();
+          console.log('Permission request result:', permissions);
+          return { 
+            hasPermission: permissions.camera === 'granted', 
+            hasBackCamera: true
+          };
+        } else {
+          return { 
+            hasPermission: true, 
+            hasBackCamera: true
+          };
+        }
       } else {
         // Use web APIs for web platform
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -63,6 +79,7 @@ class CameraService {
         return { hasPermission: true, hasBackCamera: true };
       }
     } catch (error) {
+      console.error('Camera permission request error:', error);
       if (Capacitor.isNativePlatform()) {
         return { hasPermission: false, hasBackCamera: true };
       } else {
@@ -83,31 +100,22 @@ class CameraService {
     const settings = storageService.getCameraSettings();
     
     try {
-      if (Capacitor.isNativePlatform()) {
-        // For native platforms, we'll handle video recording differently
-        // This method focuses on camera preview setup
-        this.videoStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
-            height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
-            frameRate: settings.frameRate,
-            facingMode: 'environment'
-          },
-          audio: audioSupport
-        });
-      } else {
-        // Web platform - use existing web API approach
-        this.videoStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
-            height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
-            frameRate: settings.frameRate,
-            facingMode: 'environment'
-          },
-          audio: audioSupport
-        });
-      }
+      console.log('Starting recording with settings:', settings);
+      console.log('Audio support:', audioSupport);
+      console.log('Is native platform:', Capacitor.isNativePlatform());
+      
+      // Use getUserMedia for both web and native platforms since Capacitor WebView supports it
+      this.videoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
+          height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
+          frameRate: settings.frameRate,
+          facingMode: 'environment'
+        },
+        audio: audioSupport
+      });
 
+      console.log('Got video stream:', this.videoStream);
       videoElement.srcObject = this.videoStream;
       
       this.recordedChunks = [];
@@ -121,6 +129,7 @@ class CameraService {
 
       this.mediaRecorder.start(1000); // Collect data every second
       this.isRecording = true;
+      console.log('Recording started successfully');
       
     } catch (error) {
       console.error('Failed to start recording:', error);
