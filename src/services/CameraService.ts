@@ -156,6 +156,18 @@ class CameraService {
             try {
               const base64Data = (reader.result as string).split(',')[1];
               
+              // Ensure videos directory exists
+              try {
+                await Filesystem.mkdir({
+                  path: 'videos',
+                  directory: Directory.Data,
+                  recursive: true
+                });
+              } catch (error) {
+                // Directory might already exist, ignore error
+                console.log('Videos directory already exists or creation failed:', error);
+              }
+              
               // Save to filesystem
               await Filesystem.writeFile({
                 path: filePath,
