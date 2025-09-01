@@ -1,5 +1,6 @@
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 import { storageService } from './StorageService';
 import { UploadJob } from '../types';
 
@@ -11,41 +12,68 @@ class CameraService {
 
   async checkPermissions(): Promise<{ hasPermission: boolean; hasBackCamera: boolean }> {
     try {
-      // Check if we can access camera and specifically back camera
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, 
-        audio: true 
-      });
-      stream.getTracks().forEach(track => track.stop());
-      return { hasPermission: true, hasBackCamera: true };
+      if (Capacitor.isNativePlatform()) {
+        // Use Capacitor Camera plugin for native platforms
+        const permissions = await Camera.checkPermissions();
+        return { 
+          hasPermission: permissions.camera === 'granted', 
+          hasBackCamera: true // Assume back camera exists on mobile devices
+        };
+      } else {
+        // Use web APIs for web platform
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' }, 
+          audio: true 
+        });
+        stream.getTracks().forEach(track => track.stop());
+        return { hasPermission: true, hasBackCamera: true };
+      }
     } catch (error) {
-      // Check if it's a permission error or no back camera
-      if (error.name === 'NotAllowedError') {
+      if (Capacitor.isNativePlatform()) {
         return { hasPermission: false, hasBackCamera: true };
+      } else {
+        // Check if it's a permission error or no back camera
+        if (error.name === 'NotAllowedError') {
+          return { hasPermission: false, hasBackCamera: true };
+        }
+        if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
+          return { hasPermission: true, hasBackCamera: false };
+        }
+        return { hasPermission: false, hasBackCamera: false };
       }
-      if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
-        return { hasPermission: true, hasBackCamera: false };
-      }
-      return { hasPermission: false, hasBackCamera: false };
     }
   }
 
   async requestPermissions(): Promise<{ hasPermission: boolean; hasBackCamera: boolean }> {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, 
-        audio: true 
-      });
-      stream.getTracks().forEach(track => track.stop());
-      return { hasPermission: true, hasBackCamera: true };
+      if (Capacitor.isNativePlatform()) {
+        // Request permissions using Capacitor Camera plugin
+        const permissions = await Camera.requestPermissions();
+        return { 
+          hasPermission: permissions.camera === 'granted', 
+          hasBackCamera: true
+        };
+      } else {
+        // Use web APIs for web platform
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' }, 
+          audio: true 
+        });
+        stream.getTracks().forEach(track => track.stop());
+        return { hasPermission: true, hasBackCamera: true };
+      }
     } catch (error) {
-      if (error.name === 'NotAllowedError') {
+      if (Capacitor.isNativePlatform()) {
         return { hasPermission: false, hasBackCamera: true };
+      } else {
+        if (error.name === 'NotAllowedError') {
+          return { hasPermission: false, hasBackCamera: true };
+        }
+        if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
+          return { hasPermission: true, hasBackCamera: false };
+        }
+        return { hasPermission: false, hasBackCamera: false };
       }
-      if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
-        return { hasPermission: true, hasBackCamera: false };
-      }
-      return { hasPermission: false, hasBackCamera: false };
     }
   }
 
@@ -55,15 +83,30 @@ class CameraService {
     const settings = storageService.getCameraSettings();
     
     try {
-      this.videoStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
-          height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
-          frameRate: settings.frameRate,
-          facingMode: 'environment' // Always use back camera
-        },
-        audio: audioSupport
-      });
+      if (Capacitor.isNativePlatform()) {
+        // For native platforms, we'll handle video recording differently
+        // This method focuses on camera preview setup
+        this.videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
+            height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
+            frameRate: settings.frameRate,
+            facingMode: 'environment'
+          },
+          audio: audioSupport
+        });
+      } else {
+        // Web platform - use existing web API approach
+        this.videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
+            height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
+            frameRate: settings.frameRate,
+            facingMode: 'environment'
+          },
+          audio: audioSupport
+        });
+      }
 
       videoElement.srcObject = this.videoStream;
       

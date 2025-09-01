@@ -1,6 +1,8 @@
-import { BackgroundUploader, type StartResult } from '@paraspot/capacitor-background-uploader';
+// Import from local plugin
+import { BackgroundUploader } from '../../capacitor-background-uploader/src';
 
 type Part = { uploadUrl: string; size: number };
+type StartResult = { uploadId: string };
 
 export async function startMultipartUploadFromFile(params: {
   fileUrl: string;        // file:/// path to your saved recording
