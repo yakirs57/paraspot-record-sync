@@ -55,19 +55,26 @@ public class BackgroundUploaderPlugin extends Plugin {
   @PluginMethod
   public void startUpload(PluginCall call) {
     String fileUrl   = call.getString("fileUrl");
+    String data      = call.getString("data");
     String uploadUrl = call.getString("uploadUrl");
     String method    = call.getString("method", "POST");
     JSObject hdrsObj = call.getObject("headers", new JSObject());
     String headers   = hdrsObj.toString();
     String field     = call.getString("field", "file");
 
-    if (fileUrl == null || fileUrl.isEmpty() || uploadUrl == null || uploadUrl.isEmpty()) {
-      call.reject("fileUrl and uploadUrl are required");
+    if ((fileUrl == null || fileUrl.isEmpty()) && (data == null || data.isEmpty())) {
+      call.reject("Either fileUrl or data is required");
+      return;
+    }
+    
+    if (uploadUrl == null || uploadUrl.isEmpty()) {
+      call.reject("uploadUrl is required");
       return;
     }
 
     Data data = new Data.Builder()
         .putString("fileUrl", fileUrl)
+        .putString("data", data)
         .putString("uploadUrl", uploadUrl)
         .putString("method", method)
         .putString("headers", headers)
