@@ -100,70 +100,75 @@ export function UploadQueueScreen() {
     }
 
     try {
-      // Get file URI from Documents directory (where videos are saved)
+      // Read file content and create blob URL to avoid security restrictions
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
-      const { Capacitor } = await import('@capacitor/core');
       
-      const fileUri = await Filesystem.getUri({
+      console.log('Reading video file:', job.fileUri);
+      
+      // Read the file as base64
+      const fileData = await Filesystem.readFile({
         directory: Directory.Documents,
         path: job.fileUri
       });
       
-      console.log('Attempting to open video at:', fileUri.uri);
+      // Convert base64 to blob
+      const response = await fetch(`data:video/mp4;base64,${fileData.data}`);
+      const blob = await response.blob();
+      const videoUrl = URL.createObjectURL(blob);
       
-      if (Capacitor.isNativePlatform()) {
-        // On native platforms, create a video element and play in-app
-        const videoElement = document.createElement('video');
-        videoElement.src = fileUri.uri;
-        videoElement.controls = true;
-        videoElement.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background: black;
-          z-index: 9999;
-          object-fit: contain;
-        `;
-        
-        // Add close button
-        const closeButton = document.createElement('button');
-        closeButton.innerHTML = '✕';
-        closeButton.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          z-index: 10000;
-          background: rgba(0,0,0,0.7);
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 40px;
-          height: 40px;
-          font-size: 20px;
-          cursor: pointer;
-        `;
-        closeButton.onclick = () => {
-          document.body.removeChild(videoElement);
-          document.body.removeChild(closeButton);
-        };
-        
-        document.body.appendChild(videoElement);
-        document.body.appendChild(closeButton);
-        
-        // Try to play the video
-        videoElement.play().catch(error => {
-          console.error('Failed to play video:', error);
-          document.body.removeChild(videoElement);
-          document.body.removeChild(closeButton);
-          throw error;
-        });
-        
-      } else {
-        // On web platform, open in new tab
-        window.open(fileUri.uri, '_blank');
-      }
+      console.log('Created video blob URL');
+      
+      // Create video element and play in-app
+      const videoElement = document.createElement('video');
+      videoElement.src = videoUrl;
+      videoElement.controls = true;
+      videoElement.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: black;
+        z-index: 9999;
+        object-fit: contain;
+      `;
+      
+      // Add close button
+      const closeButton = document.createElement('button');
+      closeButton.innerHTML = '✕';
+      closeButton.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        cursor: pointer;
+      `;
+      
+      const cleanup = () => {
+        URL.revokeObjectURL(videoUrl); // Clean up memory
+        document.body.removeChild(videoElement);
+        document.body.removeChild(closeButton);
+      };
+      
+      closeButton.onclick = cleanup;
+      videoElement.onended = cleanup;
+      
+      document.body.appendChild(videoElement);
+      document.body.appendChild(closeButton);
+      
+      // Try to play the video
+      videoElement.play().catch(error => {
+        console.error('Failed to play video:', error);
+        cleanup();
+        throw error;
+      });
       
     } catch (error) {
       console.error('Failed to open video:', error);
