@@ -102,19 +102,28 @@ public class UploaderWorker extends Worker {
         }
 
         try (Response resp = client.newCall(request).execute()) {
-            if (!resp.isSuccessful()) throw new Exception("HTTP " + resp.code());
+            if (!resp.isSuccessful()) {
+                Data output = new Data.Builder()
+                    .putString("error", "HTTP " + resp.code())
+                    .putInt("status", resp.code())
+                    .build();
+                return Result.failure(output);
+            }
+            
+            // Final success notification
+            Notification n = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
+                .setContentTitle("Upload complete")
+                .setContentText("Success")
+                .setSmallIcon(android.R.drawable.stat_sys_upload_done)
+                .setOngoing(false)
+                .build();
+            nm.notify(NOTIF_ID, n);
+            
+            Data output = new Data.Builder()
+                .putInt("status", resp.code())
+                .build();
+            return Result.success(output);
         }
-
-        // Final success notification
-        Notification n = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
-            .setContentTitle("Upload complete")
-            .setContentText("Success")
-            .setSmallIcon(android.R.drawable.stat_sys_upload_done)
-            .setOngoing(false)
-            .build();
-        nm.notify(NOTIF_ID, n);
-
-        return Result.success();
         } catch (Exception e) {
         Notification n = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
             .setContentTitle("Upload failed")
@@ -123,11 +132,16 @@ public class UploaderWorker extends Worker {
             .setOngoing(false)
             .build();
         nm.notify(NOTIF_ID, n);
-        return Result.failure();
+        
+        Data output = new Data.Builder()
+            .putString("error", e.getMessage() != null ? e.getMessage() : "Unknown error")
+            .build();
+        return Result.failure(output);
         }
     }
 
     private void updateProgress(NotificationManager nm, int pct) {
+        // Update notification
         Notification n = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
             .setContentTitle("Uploading…")
             .setContentText(pct + "%")
@@ -137,6 +151,12 @@ public class UploaderWorker extends Worker {
             .setProgress(100, pct, false)
             .build();
         nm.notify(NOTIF_ID, n);
+        
+        // Report progress to WorkManager
+        Data progress = new Data.Builder()
+            .putInt("progress", pct)
+            .build();
+        setProgressAsync(progress);
     }
 
     private ForegroundInfo createForegroundInfo(String title, String text, boolean indeterminate, int pct) {
