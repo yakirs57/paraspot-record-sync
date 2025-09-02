@@ -150,7 +150,7 @@ export function CameraScreen() {
     if (!isRecording || !inspectionId) return;
     
     try {
-      const job = await cameraService.stopRecording(inspectionId);
+      const job = await cameraService.stopRecording(inspectionId, teamInspectionArg, audioSupport, autoApply);
       
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);

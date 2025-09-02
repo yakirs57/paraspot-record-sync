@@ -162,11 +162,17 @@ class UploadService {
         throw new Error('No video data found');
       }
 
+      // (audioSupport || (teamInspection && !teamInspectionArg)) ? `${scanID}XXAUDIOXX_${inspection_type}_${pid}` : `${scanID}_${inspection_type}_${pid}`
+      const inspectionUploadId = (
+        job.audioSupport ? 
+        `${job.inspectionRecord.scan_id}XXAUDIOXX_${job.inspectionRecord.type}_${job.inspectionRecord.pid}` : 
+        `${job.inspectionRecord.scan_id}_${job.inspectionRecord.type}_${job.inspectionRecord.pid}`
+      );
       // Get presigned URLs
       const urlResponse = await this.fetchPresignedUrls(
-        job.inspectionId, 
-        job.fileName, 
-        totalChunks, 
+        inspectionUploadId,
+        job.fileName,
+        totalChunks,
         'video/mp4'
       );
 
@@ -184,7 +190,7 @@ class UploadService {
 
       if (success) {
         // Finalize upload
-        const finalized = await this.finalizeUpload(job.inspectionId, job.fileName, totalChunks);
+        const finalized = await this.finalizeUpload(inspectionUploadId, job.fileName, totalChunks);
         
         if (finalized) {
           storageService.updateUploadJob(jobId, { status: 'completed', progress: 100 });

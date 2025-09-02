@@ -20,6 +20,9 @@ export interface UploadJob {
   createdAt: number;
   status: 'pending' | 'uploading' | 'paused' | 'failed' | 'completed';
   progress: number;
+  teamInspection: boolean;
+  audioSupport: boolean;
+  autoApply: string;
   uploadId?: string;
   partSize?: number;
   nextPart?: number;

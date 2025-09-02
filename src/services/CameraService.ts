@@ -187,7 +187,7 @@ class CameraService {
     }
   }
 
-  async stopRecording(inspectionId: string): Promise<UploadJob> {
+  async stopRecording(inspectionId: string, teamInspection: boolean, audioSupport: boolean, autoApply: string): Promise<UploadJob> {
     return new Promise((resolve, reject) => {
       if (!this.mediaRecorder || !this.isRecording) {
         reject(new Error('Not recording'));
@@ -234,7 +234,10 @@ class CameraService {
                 size: blob.size,
                 createdAt: Date.now(),
                 status: 'pending',
-                progress: 0
+                progress: 0,
+                teamInspection,
+                audioSupport,
+                autoApply
               };
 
               storageService.addUploadJob(job);
