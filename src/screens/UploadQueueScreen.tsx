@@ -100,43 +100,28 @@ export function UploadQueueScreen() {
     }
 
     try {
-      // Read the video file from filesystem
+      // Get file URI and open with native video player
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
       
-      const result = await Filesystem.readFile({
-        path: job.fileUri,
-        directory: Directory.Data
+      // Get the full file URI
+      const fileUri = await Filesystem.getUri({
+        directory: Directory.Data,
+        path: job.fileUri
       });
       
-      // Convert base64 data back to blob
-      const base64Data = result.data as string;
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
+      // Open with device's native video player using Browser plugin
+      const { Browser } = await import('@capacitor/browser');
       
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'video/mp4' });
-      
-      // Create object URL and open in new tab
-      const videoUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = videoUrl;
-      link.target = '_blank';
-      link.click();
-      
-      // Clean up the object URL after some time
-      setTimeout(() => {
-        URL.revokeObjectURL(videoUrl);
-      }, 1000);
+      await Browser.open({ 
+        url: fileUri.uri,
+        presentationStyle: 'fullscreen'
+      });
       
     } catch (error) {
-      console.error('Failed to load video:', error);
+      console.error('Failed to open video natively:', error);
       toast({
-        title: "Video Load Failed", 
-        description: "Unable to load video file",
+        title: "Video Open Failed", 
+        description: "Unable to open video with native player",
         variant: "destructive"
       });
     }
