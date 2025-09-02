@@ -117,6 +117,7 @@ class UploadService {
 
   async finalizeUpload(inspectionId: string, fileName: string, totalChunks: number): Promise<boolean> {
     try {
+      console.log(`Finalizing upload for ${fileName} (ID: ${inspectionId}, Chunks: ${totalChunks})`);
       const response = await fetch(`${this.API_BASE_URL}/media/upload_video`, postReqOptBuilder({
         expectedSize: totalChunks,
         id: inspectionId,
@@ -124,7 +125,7 @@ class UploadService {
       }));
       
       const jsonResponse = await response.json();
-      
+      console.log("Finalize upload response:\n", JSON.stringify(jsonResponse));
       if (jsonResponse.status === 200) {
         // Send scan started notification
         try {

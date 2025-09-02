@@ -84,6 +84,7 @@ class BackgroundUploadService {
     // Listen for upload completion
     BackgroundUploader.addListener('completed', (event) => {
       const { jobId, chunkIndex, totalChunks } = this.findJobByUploadId(event.uploadId);
+      console.log(`At BackgroundUploader.L.completed for job ${jobId}, chunk ${chunkIndex} of ${totalChunks}`);
       if (jobId) {
         this.handleChunkCompleted(jobId, chunkIndex, totalChunks, event.status || 200);
         this.activeUploads.delete(`${jobId}_${chunkIndex}`);
@@ -164,6 +165,7 @@ class BackgroundUploadService {
   }
 
   private async finalizeJobUpload(jobId: string, totalChunks: number) {
+    console.log(`At finalizeJobUpload for job ${jobId}, total chunks ${totalChunks}`);
     const job = storageService.getUploadQueue().find(j => j.id === jobId);
     if (!job) return;
 
@@ -206,6 +208,7 @@ class BackgroundUploadService {
 
     try {
       await this.processJob(job);
+      console.log(`Finished processJob successfully for job ${job.id}`);
     } catch (error) {
       console.error('Failed to process job:', error);
       storageService.updateUploadJob(job.id, { 
@@ -276,6 +279,7 @@ class BackgroundUploadService {
             'Content-Type': 'application/octet-stream'
           }
         });
+        console.log("Finished API call for chunk upload");
 
         // Store the mapping of job+chunk to upload ID
         this.activeUploads.set(`${job.id}_${i}`, {
