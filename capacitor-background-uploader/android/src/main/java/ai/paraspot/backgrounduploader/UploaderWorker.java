@@ -41,12 +41,16 @@ public class UploaderWorker extends Worker {
     public Result doWork() {
         Data input = getInputData();
         String fileUrl     = input.getString("fileUrl");
+        String data        = input.getString("data");
         String uploadUrl   = input.getString("uploadUrl");
         String method      = input.getString("method");
         String headersJson = input.getString("headers");
         String field       = input.getString("field");
 
-        if (fileUrl == null || uploadUrl == null) return Result.failure();
+        if ((fileUrl == null || fileUrl.isEmpty()) && (data == null || data.isEmpty())) {
+            return Result.failure();
+        }
+        if (uploadUrl == null) return Result.failure();
 
         NotificationManager nm = (NotificationManager) getApplicationContext()
             .getSystemService(Context.NOTIFICATION_SERVICE);
@@ -63,10 +67,23 @@ public class UploaderWorker extends Worker {
         try {
         OkHttpClient client = new OkHttpClient.Builder().build();
 
-        // Resolve file path
-        String path = fileUrl.startsWith("file://") ? fileUrl.substring("file://".length()) : fileUrl;
-        File file = new File(path);
-        if (!file.exists()) throw new Exception("File not found: " + path);
+        // Create RequestBody from either file or base64 data
+        RequestBody rawBody;
+        String fileName = "upload";
+        
+        if (data != null && !data.isEmpty()) {
+            // Use base64 data
+            byte[] bytes = android.util.Base64.decode(data, android.util.Base64.DEFAULT);
+            rawBody = RequestBody.create(bytes, MediaType.parse("application/octet-stream"));
+            fileName = "chunk.tmp";
+        } else {
+            // Use file path
+            String path = fileUrl.startsWith("file://") ? fileUrl.substring("file://".length()) : fileUrl;
+            File file = new File(path);
+            if (!file.exists()) throw new Exception("File not found: " + path);
+            rawBody = RequestBody.create(file, MediaType.parse("application/octet-stream"));
+            fileName = file.getName();
+        }
 
         Request.Builder reqBuilder = new Request.Builder().url(uploadUrl);
 
@@ -86,17 +103,17 @@ public class UploaderWorker extends Worker {
         Request request;
         if ("PUT".equalsIgnoreCase(method)) {
             ProgressRequestBody body = new ProgressRequestBody(
-                RequestBody.create(file, MediaType.parse("application/octet-stream")),
+                rawBody,
                 pct -> updateProgress(nm, pct)
             );
             request = reqBuilder.put(body).build();
         } else {
             ProgressRequestBody fileBody = new ProgressRequestBody(
-                RequestBody.create(file, MediaType.parse("application/octet-stream")),
+                rawBody,
                 pct -> updateProgress(nm, pct)
             );
             MultipartBody multi = new MultipartBody.Builder().setType(MultipartBody.FORM)
-                .addFormDataPart(field != null ? field : "file", file.getName(), fileBody)
+                .addFormDataPart(field != null ? field : "file", fileName, fileBody)
                 .build();
             request = reqBuilder.post(multi).build();
         }

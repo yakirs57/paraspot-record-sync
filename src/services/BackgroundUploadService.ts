@@ -8,7 +8,8 @@ import { UploadJob } from '../types';
 
 // Background uploader types
 interface StartParams {
-  fileUrl: string;             
+  fileUrl?: string;             
+  data?: string;                // base64 data as alternative to fileUrl
   uploadUrl: string;
   method?: 'POST' | 'PUT';
   headers?: Record<string, string>;
@@ -266,13 +267,13 @@ class BackgroundUploadService {
       const chunk = chunks[i];
       const presignedUrl = urlResponse.presigned_urls[i];
       
-      // Create temporary file for chunk
-      const chunkPath = await this.saveChunkToFile(chunk, job.id, i);
+      // Convert chunk to base64 data
+      const chunkData = await this.convertChunkToBase64(chunk);
       
       try {
         // Start background upload for this chunk
         const result = await BackgroundUploader.startUpload({
-          fileUrl: chunkPath,
+          data: chunkData,
           uploadUrl: presignedUrl,
           method: 'PUT',
           headers: {
@@ -294,16 +295,15 @@ class BackgroundUploadService {
     }
   }
 
-  private async saveChunkToFile(chunk: Blob, jobId: string, chunkIndex: number): Promise<string> {
-    // Instead of writing to filesystem (which conflicts with camera cleanup),
-    // create a blob URL directly for the background uploader to use
+  private async convertChunkToBase64(chunk: Blob): Promise<string> {
     try {
-      console.log(`Creating blob URL for chunk ${chunkIndex} of job ${jobId}`);
-      const blobUrl = URL.createObjectURL(chunk);
-      console.log(`Successfully created blob URL: ${blobUrl}`);
-      return blobUrl;
+      // Convert blob to base64
+      const arrayBuffer = await chunk.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const base64 = btoa(String.fromCharCode(...uint8Array));
+      return base64;
     } catch (error) {
-      console.error(`Failed to create blob URL for chunk ${chunkIndex}:`, error);
+      console.error('Failed to convert chunk to base64:', error);
       throw new Error(`Failed to prepare chunk for upload: ${error}`);
     }
   }

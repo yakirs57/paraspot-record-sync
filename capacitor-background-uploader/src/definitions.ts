@@ -8,7 +8,8 @@ export interface BackgroundUploaderPlugin {
 }
 
 export interface StartParams {
-  fileUrl: string;             // e.g. file:///…  (Android can also be content:// if you adapt later)
+  fileUrl?: string;             // e.g. file:///…  (Android can also be content:// if you adapt later)
+  data?: string;                // base64 data as alternative to fileUrl
   uploadUrl: string;
   method?: 'POST' | 'PUT';
   headers?: Record<string, string>;
