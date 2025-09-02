@@ -111,17 +111,25 @@ export function UploadQueueScreen() {
         path: job.fileUri
       });
       
-      // Convert base64 to blob
-      const response = await fetch(`data:video/mp4;base64,${fileData.data}`);
-      const blob = await response.blob();
+      console.log('File read successfully, creating blob...');
+      
+      // Convert base64 to ArrayBuffer for better compatibility
+      const binaryString = atob(fileData.data as string);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // Create blob with proper MIME type
+      const blob = new Blob([bytes], { type: 'video/mp4' });
       const videoUrl = URL.createObjectURL(blob);
       
-      console.log('Created video blob URL');
+      console.log('Created video blob URL:', videoUrl);
       
       // Create video element and play in-app
       const videoElement = document.createElement('video');
-      videoElement.src = videoUrl;
       videoElement.controls = true;
+      videoElement.preload = 'metadata';
       videoElement.style.cssText = `
         position: fixed;
         top: 0;
@@ -152,16 +160,33 @@ export function UploadQueueScreen() {
       `;
       
       const cleanup = () => {
+        console.log('Cleaning up video player');
         URL.revokeObjectURL(videoUrl); // Clean up memory
-        document.body.removeChild(videoElement);
-        document.body.removeChild(closeButton);
+        if (document.body.contains(videoElement)) document.body.removeChild(videoElement);
+        if (document.body.contains(closeButton)) document.body.removeChild(closeButton);
       };
       
       closeButton.onclick = cleanup;
       videoElement.onended = cleanup;
       
+      // Handle video loading errors
+      videoElement.onerror = (error) => {
+        console.error('Video element error:', error);
+        cleanup();
+        toast({
+          title: "Video Playback Error",
+          description: "The video format may not be supported",
+          variant: "destructive"
+        });
+      };
+      
+      // Set source after all event handlers are attached
+      videoElement.src = videoUrl;
+      
       document.body.appendChild(videoElement);
       document.body.appendChild(closeButton);
+      
+      console.log('Video player created, attempting to play...');
       
       // Try to play the video
       videoElement.play().catch(error => {
@@ -174,7 +199,7 @@ export function UploadQueueScreen() {
       console.error('Failed to open video:', error);
       toast({
         title: "Video Open Failed", 
-        description: "Unable to open video. Please check if the file exists.",
+        description: `Unable to open video: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     }
