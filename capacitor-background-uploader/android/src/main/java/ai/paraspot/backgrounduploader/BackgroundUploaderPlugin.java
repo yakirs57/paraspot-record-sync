@@ -72,9 +72,24 @@ public class BackgroundUploaderPlugin extends Plugin {
       return;
     }
 
+    // Handle large data by saving to temp file to avoid WorkManager 10KB limit
+    String actualFileUrl = fileUrl;
+    if (data != null && !data.isEmpty()) {
+      try {
+        // Create temp file for large base64 data
+        java.io.File tempFile = java.io.File.createTempFile("upload_chunk_", ".dat", getContext().getCacheDir());
+        java.io.FileOutputStream fos = new java.io.FileOutputStream(tempFile);
+        fos.write(android.util.Base64.decode(data, android.util.Base64.DEFAULT));
+        fos.close();
+        actualFileUrl = tempFile.getAbsolutePath();
+      } catch (Exception e) {
+        call.reject("Failed to create temp file for upload: " + e.getMessage());
+        return;
+      }
+    }
+
     Data workData = new Data.Builder()
-        .putString("fileUrl", fileUrl)
-        .putString("data", data)
+        .putString("fileUrl", actualFileUrl)
         .putString("uploadUrl", uploadUrl)
         .putString("method", method)
         .putString("headers", headers)
