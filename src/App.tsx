@@ -27,7 +27,9 @@ const App = () => {
         if (!isActive) {
           // App going to background - cleanup camera resources
           console.log('App going to background, cleaning up camera...');
-          cameraService.cleanup();
+          cameraService.cleanup().catch(error => {
+            console.error('Error during camera cleanup:', error);
+          });
         }
       });
     };
@@ -44,7 +46,9 @@ const App = () => {
     // Cleanup when app unmounts
     return () => {
       backgroundUploadService.stopProcessing();
-      cameraService.cleanup();
+      cameraService.cleanup().catch(error => {
+        console.error('Error during unmount camera cleanup:', error);
+      });
     };
   }, []);
 

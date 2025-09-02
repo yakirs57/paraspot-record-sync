@@ -243,7 +243,7 @@ class CameraService {
               storageService.addUploadJob(job);
               
               // Immediate cleanup of camera resources before upload
-              this.cleanup();
+              await this.cleanup();
 
               resolve(job);
             } catch (error) {
@@ -271,28 +271,56 @@ class CameraService {
   }
 
   // Force cleanup of camera resources
-  cleanup(): void {
+  async cleanup(): Promise<void> {
     console.log('Cleaning up camera resources...');
     
-    // Stop all tracks immediately
-    if (this.videoStream) {
-      this.videoStream.getTracks().forEach(track => {
-        console.log('Stopping track:', track.kind, track.label);
-        track.stop();
-      });
-      this.videoStream = null;
-    }
-    
-    // Stop media recorder if active
+    // Stop media recorder first if active
     if (this.mediaRecorder && this.isRecording) {
       try {
+        console.log('Stopping media recorder...');
         this.mediaRecorder.stop();
+        // Wait a bit for the stop event to process
+        await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
         console.warn('Error stopping media recorder:', error);
       }
       this.mediaRecorder = null;
     }
     
+    // Stop all tracks with proper cleanup
+    if (this.videoStream) {
+      console.log('Stopping video stream tracks...');
+      const tracks = this.videoStream.getTracks();
+      
+      // Stop tracks and wait for each to fully stop
+      for (const track of tracks) {
+        console.log('Stopping track:', track.kind, track.label, 'readyState:', track.readyState);
+        try {
+          track.stop();
+          // Wait for track to fully stop
+          await new Promise(resolve => {
+            if (track.readyState === 'ended') {
+              resolve(undefined);
+            } else {
+              const checkEnded = () => {
+                if (track.readyState === 'ended') {
+                  resolve(undefined);
+                } else {
+                  setTimeout(checkEnded, 10);
+                }
+              };
+              checkEnded();
+            }
+          });
+        } catch (error) {
+          console.warn('Error stopping track:', error);
+        }
+      }
+      
+      this.videoStream = null;
+    }
+    
+    // Clear all state
     this.isRecording = false;
     this.recordedChunks = [];
     console.log('Camera cleanup complete');
