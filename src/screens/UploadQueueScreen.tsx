@@ -101,7 +101,7 @@ export function UploadQueueScreen() {
 
     try {
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
-      const { Browser } = await import('@capacitor/browser');
+      const { FileOpener } = await import('@capacitor-community/file-opener');
       
       // Get the full file URI for the video
       const fileUri = await Filesystem.getUri({
@@ -109,19 +109,19 @@ export function UploadQueueScreen() {
         path: job.fileUri
       });
       
-      console.log('Opening video with native player:', fileUri.uri);
+      console.log('Opening video with system default player:', fileUri.uri);
       
-      // Open video in the device's native video player
-      await Browser.open({
-        url: fileUri.uri,
-        presentationStyle: 'fullscreen'
+      // Open video with the system's default video player
+      await FileOpener.open({
+        filePath: fileUri.uri,
+        contentType: 'video/mp4'
       });
       
     } catch (error) {
       console.error('Failed to open video:', error);
       toast({
         title: "Video Open Failed", 
-        description: `Unable to open video with native player`,
+        description: `Unable to open video with system player`,
         variant: "destructive"
       });
     }
