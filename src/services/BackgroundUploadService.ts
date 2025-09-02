@@ -291,15 +291,26 @@ class BackgroundUploadService {
   }
 
   private async saveChunkToFile(chunk: Blob, jobId: string, chunkIndex: number): Promise<string> {
-    // Instead of writing to filesystem (which conflicts with camera cleanup),
-    // create a blob URL directly for the background uploader to use
     try {
-      console.log(`Creating blob URL for chunk ${chunkIndex} of job ${jobId}`);
-      const blobUrl = URL.createObjectURL(chunk);
-      console.log(`Successfully created blob URL: ${blobUrl}`);
-      return blobUrl;
+      console.log(`Saving chunk ${chunkIndex} to file for job ${jobId}`);
+      
+      // Convert blob to base64
+      const arrayBuffer = await chunk.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const base64 = btoa(String.fromCharCode(...uint8Array));
+      
+      // Save to temporary file
+      const fileName = `chunk_${jobId}_${chunkIndex}.tmp`;
+      const result = await Filesystem.writeFile({
+        path: fileName,
+        data: base64,
+        directory: Directory.Cache
+      });
+      
+      console.log(`Successfully saved chunk to file: ${result.uri}`);
+      return result.uri;
     } catch (error) {
-      console.error(`Failed to create blob URL for chunk ${chunkIndex}:`, error);
+      console.error(`Failed to save chunk ${chunkIndex} to file:`, error);
       throw new Error(`Failed to prepare chunk for upload: ${error}`);
     }
   }
