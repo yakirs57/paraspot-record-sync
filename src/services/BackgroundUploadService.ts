@@ -303,11 +303,13 @@ class BackgroundUploadService {
 
     const fileName = `chunk_${jobId}_${chunkIndex}.bin`;
     
+    console.log("Writing tmp file before uploading");
     await Filesystem.writeFile({
       path: fileName,
       data: base64,
       directory: Directory.Cache
     });
+    console.log("[Finished] Writing tmp file before uploading");
     
     const result = await Filesystem.getUri({
       directory: Directory.Cache,
