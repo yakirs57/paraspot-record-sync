@@ -84,38 +84,40 @@ public class BackgroundUploaderPlugin extends Plugin {
     String uploadId = req.getId().toString();
     activeUploads.put(uploadId, req.getId());
     
-    // Observe work progress and completion
-    workManager.getWorkInfoByIdLiveData(req.getId()).observeForever(new Observer<WorkInfo>() {
-      @Override
-      public void onChanged(WorkInfo workInfo) {
-        if (workInfo != null) {
-          Data progress = workInfo.getProgress();
-          Data output = workInfo.getOutputData();
-          
-          switch (workInfo.getState()) {
-            case RUNNING:
-              int progressPct = progress.getInt("progress", 0);
-              if (progressPct > 0) {
-                notifyProgress(uploadId, progressPct);
-              }
-              break;
-            case SUCCEEDED:
-              int status = output.getInt("status", 200);
-              notifyCompleted(uploadId, status);
-              activeUploads.remove(uploadId);
-              break;
-            case FAILED:
-              String error = output.getString("error");
-              notifyError(uploadId, error != null ? error : "Upload failed");
-              activeUploads.remove(uploadId);
-              break;
-            case CANCELLED:
-              notifyError(uploadId, "Upload cancelled");
-              activeUploads.remove(uploadId);
-              break;
+    // Observe work progress and completion on main thread
+    getActivity().runOnUiThread(() -> {
+      workManager.getWorkInfoByIdLiveData(req.getId()).observeForever(new Observer<WorkInfo>() {
+        @Override
+        public void onChanged(WorkInfo workInfo) {
+          if (workInfo != null) {
+            Data progress = workInfo.getProgress();
+            Data output = workInfo.getOutputData();
+            
+            switch (workInfo.getState()) {
+              case RUNNING:
+                int progressPct = progress.getInt("progress", 0);
+                if (progressPct > 0) {
+                  notifyProgress(uploadId, progressPct);
+                }
+                break;
+              case SUCCEEDED:
+                int status = output.getInt("status", 200);
+                notifyCompleted(uploadId, status);
+                activeUploads.remove(uploadId);
+                break;
+              case FAILED:
+                String error = output.getString("error");
+                notifyError(uploadId, error != null ? error : "Upload failed");
+                activeUploads.remove(uploadId);
+                break;
+              case CANCELLED:
+                notifyError(uploadId, "Upload cancelled");
+                activeUploads.remove(uploadId);
+                break;
+            }
           }
         }
-      }
+      });
     });
 
     JSObject ret = new JSObject();
