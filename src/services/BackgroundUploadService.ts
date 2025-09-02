@@ -111,11 +111,11 @@ class BackgroundUploadService {
   private findJobByUploadId(uploadId: string): { jobId: string; chunkIndex: number; totalChunks: number } {
     for (const [key, value] of this.activeUploads.entries()) {
       if (value.uploadId === uploadId) {
+        console.log(`[findJobByUploadId] Key: ${key} | Value:`, JSON.stringify(value));
         const [jobId, chunkIndexStr] = key.split('_');
         return { 
           jobId, 
-          chunkIndex: parseInt(chunkIndexStr), 
-          totalChunks: value.totalChunks 
+          ...value
         };
       }
     }
@@ -137,6 +137,7 @@ class BackgroundUploadService {
   }
 
   private async handleChunkCompleted(jobId: string, chunkIndex: number, totalChunks: number, status: number) {
+    console.log(`[handleChunkCompleted] jobId: ${jobId}, status: ${status}, chunkIndex: ${chunkIndex}, totalChunks: ${totalChunks}`);
     if (status < 200 || status >= 300) {
       storageService.updateUploadJob(jobId, { 
         status: 'failed', 
@@ -146,22 +147,30 @@ class BackgroundUploadService {
       return;
     }
 
+    console.log(`[handleChunkCompleted/J-${jobId}] this.jobChunkProgress: ${JSON.stringify(this.jobChunkProgress)}`);
+
     // Mark chunk as completed
     if (this.jobChunkProgress.has(jobId)) {
+      console.log(`[handleChunkCompleted/J-${jobId}] jobChunkProgress has jobId`);
       const chunkProgresses = this.jobChunkProgress.get(jobId)!;
       chunkProgresses[chunkIndex] = 100;
       
       // Check if all chunks are completed
       const allCompleted = chunkProgresses.every(p => p === 100);
+      console.log(`[handleChunkCompleted/J-${jobId}] allCompleted: ${allCompleted}`);
       const overallProgress = Math.floor(chunkProgresses.reduce((sum, p) => sum + p, 0) / chunkProgresses.length);
+      console.log(`[handleChunkCompleted/J-${jobId}] overallProgress: ${overallProgress}`);
       
       storageService.updateUploadJob(jobId, { progress: overallProgress });
       this.updateProgressNotification(jobId, overallProgress);
       
       if (allCompleted) {
+        console.log(`[handleChunkCompleted/J-${jobId}] All chunks completed, finalizing upload`);
         // All chunks completed, finalize upload
         await this.finalizeJobUpload(jobId, totalChunks);
       }
+    } else {
+      console.log(`[HandleChunkCompleted/J-${jobId}] jobId not in jobChunkProgress`);
     }
   }
 

@@ -1,10 +1,10 @@
-import { WebPlugin } from '@capacitor/core';
+// import { WebPlugin } from '@capacitor/core';
 
-import type { BackgroundUploaderPlugin } from './definitions';
+// import type { BackgroundUploaderPlugin } from './definitions';
 
-export class BackgroundUploaderWeb extends WebPlugin implements BackgroundUploaderPlugin {
-  async echo(options: { value: string }): Promise<{ value: string }> {
-    console.log('ECHO', options);
-    return options;
-  }
-}
+// export class BackgroundUploaderWeb extends WebPlugin implements BackgroundUploaderPlugin {
+//   async echo(options: { value: string }): Promise<{ value: string }> {
+//     console.log('ECHO', options);
+//     return options;
+//   }
+// }
