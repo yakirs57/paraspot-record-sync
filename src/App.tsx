@@ -5,10 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
+import { App as CapacitorApp } from '@capacitor/app';
 import { HomeScreen } from "./screens/HomeScreen";
 import { CameraScreen } from "./screens/CameraScreen";
 import { UploadQueueScreen } from "./screens/UploadQueueScreen";
 import { backgroundUploadService } from "./services/BackgroundUploadService";
+import { cameraService } from "./services/CameraService";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -17,6 +19,20 @@ const App = () => {
   useEffect(() => {
     // Initialize background upload service
     backgroundUploadService.initialize();
+
+    // Setup app state change listener for camera cleanup
+    const setupAppStateListener = async () => {
+      await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        console.log('App state changed, isActive:', isActive);
+        if (!isActive) {
+          // App going to background - cleanup camera resources
+          console.log('App going to background, cleaning up camera...');
+          cameraService.cleanup();
+        }
+      });
+    };
+
+    setupAppStateListener();
 
     // Request permissions to the camera and microphone
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -28,6 +44,7 @@ const App = () => {
     // Cleanup when app unmounts
     return () => {
       backgroundUploadService.stopProcessing();
+      cameraService.cleanup();
     };
   }, []);
 

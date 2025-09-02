@@ -242,13 +242,8 @@ class CameraService {
 
               storageService.addUploadJob(job);
               
-              // Cleanup
-              if (this.videoStream) {
-                this.videoStream.getTracks().forEach(track => track.stop());
-                this.videoStream = null;
-              }
-              this.isRecording = false;
-              this.recordedChunks = [];
+              // Immediate cleanup of camera resources before upload
+              this.cleanup();
 
               resolve(job);
             } catch (error) {
@@ -273,6 +268,34 @@ class CameraService {
 
   isCurrentlyRecording(): boolean {
     return this.isRecording;
+  }
+
+  // Force cleanup of camera resources
+  cleanup(): void {
+    console.log('Cleaning up camera resources...');
+    
+    // Stop all tracks immediately
+    if (this.videoStream) {
+      this.videoStream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind, track.label);
+        track.stop();
+      });
+      this.videoStream = null;
+    }
+    
+    // Stop media recorder if active
+    if (this.mediaRecorder && this.isRecording) {
+      try {
+        this.mediaRecorder.stop();
+      } catch (error) {
+        console.warn('Error stopping media recorder:', error);
+      }
+      this.mediaRecorder = null;
+    }
+    
+    this.isRecording = false;
+    this.recordedChunks = [];
+    console.log('Camera cleanup complete');
   }
 
   // Camera switching removed - only back camera supported
