@@ -100,106 +100,28 @@ export function UploadQueueScreen() {
     }
 
     try {
-      // Read file content and create blob URL to avoid security restrictions
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      const { Browser } = await import('@capacitor/browser');
       
-      console.log('Reading video file:', job.fileUri);
-      
-      // Read the file as base64
-      const fileData = await Filesystem.readFile({
+      // Get the full file URI for the video
+      const fileUri = await Filesystem.getUri({
         directory: Directory.Documents,
         path: job.fileUri
       });
       
-      console.log('File read successfully, creating blob...');
+      console.log('Opening video with native player:', fileUri.uri);
       
-      // Convert base64 to ArrayBuffer for better compatibility
-      const binaryString = atob(fileData.data as string);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      // Create blob with proper MIME type
-      const blob = new Blob([bytes], { type: 'video/mp4' });
-      const videoUrl = URL.createObjectURL(blob);
-      
-      console.log('Created video blob URL:', videoUrl);
-      
-      // Create video element and play in-app
-      const videoElement = document.createElement('video');
-      videoElement.controls = true;
-      videoElement.preload = 'metadata';
-      videoElement.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: black;
-        z-index: 9999;
-        object-fit: contain;
-      `;
-      
-      // Add close button
-      const closeButton = document.createElement('button');
-      closeButton.innerHTML = '✕';
-      closeButton.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-        cursor: pointer;
-      `;
-      
-      const cleanup = () => {
-        console.log('Cleaning up video player');
-        URL.revokeObjectURL(videoUrl); // Clean up memory
-        if (document.body.contains(videoElement)) document.body.removeChild(videoElement);
-        if (document.body.contains(closeButton)) document.body.removeChild(closeButton);
-      };
-      
-      closeButton.onclick = cleanup;
-      videoElement.onended = cleanup;
-      
-      // Handle video loading errors
-      videoElement.onerror = (error) => {
-        console.error('Video element error:', error);
-        cleanup();
-        toast({
-          title: "Video Playback Error",
-          description: "The video format may not be supported",
-          variant: "destructive"
-        });
-      };
-      
-      // Set source after all event handlers are attached
-      videoElement.src = videoUrl;
-      
-      document.body.appendChild(videoElement);
-      document.body.appendChild(closeButton);
-      
-      console.log('Video player created, attempting to play...');
-      
-      // Try to play the video
-      videoElement.play().catch(error => {
-        console.error('Failed to play video:', error);
-        cleanup();
-        throw error;
+      // Open video in the device's native video player
+      await Browser.open({
+        url: fileUri.uri,
+        presentationStyle: 'fullscreen'
       });
       
     } catch (error) {
       console.error('Failed to open video:', error);
       toast({
         title: "Video Open Failed", 
-        description: `Unable to open video: ${error.message || 'Unknown error'}`,
+        description: `Unable to open video with native player`,
         variant: "destructive"
       });
     }
