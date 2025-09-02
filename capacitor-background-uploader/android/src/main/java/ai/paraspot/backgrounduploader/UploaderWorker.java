@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
@@ -149,6 +150,12 @@ public class UploaderWorker extends Worker {
         if (!indeterminate) b.setProgress(100, pct, false);
 
         Notification n = b.build();
-        return new ForegroundInfo(NOTIF_ID, n);
+        
+        // For Android 14+ (API 34+), specify the foreground service type
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return new ForegroundInfo(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        } else {
+            return new ForegroundInfo(NOTIF_ID, n);
+        }
     }
 }
