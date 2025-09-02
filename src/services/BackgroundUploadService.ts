@@ -34,8 +34,6 @@ interface BackgroundUploaderPlugin {
 const BackgroundUploader = registerPlugin<BackgroundUploaderPlugin>('BackgroundUploader');
 
 class BackgroundUploadService {
-  private processingInterval: number | null = null;
-  private isProcessing = false;
   private activeUploads = new Map<string, { uploadId: string; chunkIndex: number; totalChunks: number }>(); // jobId_chunkIndex -> uploadDetails
   private jobChunkProgress = new Map<string, number[]>(); // jobId -> chunk progress array
   private notificationId = 1000;
@@ -49,23 +47,25 @@ class BackgroundUploadService {
       await this.setupBackgroundUploaderListeners();
       
       // Set up callback to trigger processing when new jobs are added
-      storageService.setOnJobAddedCallback(() => {
-        if (!this.isProcessing) {
-          this.startProcessing();
-        }
+      storageService.setOnJobAddedCallback((job) => {
+        this.processSingleJob(job);
       });
       
       // Start processing when app goes to background
       App.addListener('appStateChange', ({ isActive }) => {
         if (!isActive) {
-          this.startProcessing();
+          // Process any pending jobs when app goes to background
+          const pendingJobs = storageService.getUploadQueue().filter(job => job.status === 'pending');
+          for (const job of pendingJobs) {
+            this.processSingleJob(job);
+          }
         }
       });
       
       // Start processing immediately if there are pending uploads
       const pendingJobs = storageService.getUploadQueue().filter(job => job.status === 'pending');
-      if (pendingJobs.length > 0) {
-        this.startProcessing();
+      for (const job of pendingJobs) {
+        this.processSingleJob(job);
       }
     } catch (error) {
       console.error('Failed to initialize BackgroundUploadService:', error);
@@ -198,36 +198,21 @@ class BackgroundUploadService {
     }
   }
 
-  async startProcessing() {
-    if (this.isProcessing) return;
-    
-    this.isProcessing = true;
-    
-    // Process uploads immediately
-    this.processUploadQueue();
-    
-    // Set up interval for continuous processing
-    this.processingInterval = window.setInterval(() => {
-      this.processUploadQueue();
-    }, 10000); // Check every 10 seconds
-  }
+  private async processSingleJob(job: UploadJob) {
+    // Skip if job is already being processed or not pending
+    if (job.status !== 'pending' || this.jobChunkProgress.has(job.id)) {
+      return;
+    }
 
-  private async processUploadQueue() {
-    const pendingJobs = storageService.getUploadQueue().filter(job => job.status === 'pending');
-    
-    for (const job of pendingJobs) {
-      if (!this.jobChunkProgress.has(job.id)) {
-        try {
-          await this.processJob(job);
-        } catch (error) {
-          console.error('Failed to process job:', error);
-          storageService.updateUploadJob(job.id, { 
-            status: 'failed', 
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-          this.showUploadNotification(job.id, 'failed', `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      }
+    try {
+      await this.processJob(job);
+    } catch (error) {
+      console.error('Failed to process job:', error);
+      storageService.updateUploadJob(job.id, { 
+        status: 'failed', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      this.showUploadNotification(job.id, 'failed', `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -386,13 +371,6 @@ class BackgroundUploadService {
   }
 
   stopProcessing() {
-    this.isProcessing = false;
-    
-    if (this.processingInterval) {
-      clearInterval(this.processingInterval);
-      this.processingInterval = null;
-    }
-    
     // Cancel all active uploads
     for (const [key, value] of this.activeUploads.entries()) {
       BackgroundUploader.cancel({ uploadId: value.uploadId });

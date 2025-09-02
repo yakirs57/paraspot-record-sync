@@ -76,9 +76,9 @@ class StorageService {
     }
   }
 
-  private onJobAddedCallback?: () => void;
+  private onJobAddedCallback?: (job: UploadJob) => void;
 
-  setOnJobAddedCallback(callback: () => void): void {
+  setOnJobAddedCallback(callback: (job: UploadJob) => void): void {
     this.onJobAddedCallback = callback;
   }
 
@@ -89,7 +89,7 @@ class StorageService {
     
     // Trigger immediate processing if callback is set
     if (this.onJobAddedCallback) {
-      this.onJobAddedCallback();
+      this.onJobAddedCallback(job);
     }
   }
 
