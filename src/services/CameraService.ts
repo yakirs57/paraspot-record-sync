@@ -113,9 +113,9 @@ class CameraService {
       // Use lower resolution settings to prevent lag on mobile devices
       this.videoStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1280, max: 1920 }, // Max 1080p to prevent lag
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 30 }, // Cap at 30fps for smoother recording
+          width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
+          height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
+          frameRate: settings.frameRate,
           facingMode: 'environment'
         },
         audio: audioSupport
@@ -154,8 +154,7 @@ class CameraService {
       // Configure MediaRecorder with explicit options for better compatibility
       const options: MediaRecorderOptions = {
         mimeType: 'video/mp4', // Prefer MP4 for better compatibility
-        videoBitsPerSecond: 2500000, // 2.5 Mbps for good quality without excessive size
-        audioBitsPerSecond: 128000   // 128 kbps for audio
+        bitsPerSecond: 4000000, // 4 Mbps for good quality without excessive size
       };
       
       // Try different MIME types if the preferred one isn't supported
