@@ -76,10 +76,21 @@ class StorageService {
     }
   }
 
+  private onJobAddedCallback?: () => void;
+
+  setOnJobAddedCallback(callback: () => void): void {
+    this.onJobAddedCallback = callback;
+  }
+
   addUploadJob(job: UploadJob): void {
     const queue = this.getUploadQueue();
     queue.push(job);
     localStorage.setItem(this.UPLOAD_QUEUE_KEY, JSON.stringify(queue));
+    
+    // Trigger immediate processing if callback is set
+    if (this.onJobAddedCallback) {
+      this.onJobAddedCallback();
+    }
   }
 
   updateUploadJob(jobId: string, updates: Partial<UploadJob>): void {

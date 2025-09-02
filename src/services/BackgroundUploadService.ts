@@ -48,6 +48,13 @@ class BackgroundUploadService {
       // Set up background uploader listeners
       await this.setupBackgroundUploaderListeners();
       
+      // Set up callback to trigger processing when new jobs are added
+      storageService.setOnJobAddedCallback(() => {
+        if (!this.isProcessing) {
+          this.startProcessing();
+        }
+      });
+      
       // Start processing when app goes to background
       App.addListener('appStateChange', ({ isActive }) => {
         if (!isActive) {
