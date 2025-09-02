@@ -178,7 +178,7 @@ class CameraService {
         try {
           const blob = new Blob(this.recordedChunks, { type: 'video/mp4' });
           const filename = `inspection_${inspectionId.split(":").slice(-1)[0]}_${Date.now()}.mp4`;
-          const filePath = `videos/${filename}`;
+          const filePath = `Paraspot/${filename}`;
           
           // Convert blob to base64 for filesystem storage
           const reader = new FileReader();
@@ -186,23 +186,23 @@ class CameraService {
             try {
               const base64Data = (reader.result as string).split(',')[1];
               
-              // Ensure videos directory exists
+              // Ensure Paraspot directory exists in Documents (public directory)
               try {
                 await Filesystem.mkdir({
-                  path: 'videos',
-                  directory: Directory.Data,
+                  path: 'Paraspot',
+                  directory: Directory.Documents,
                   recursive: true
                 });
               } catch (error) {
                 // Directory might already exist, ignore error
-                console.log('Videos directory already exists or creation failed:', error);
+                console.log('Paraspot directory already exists or creation failed:', error);
               }
               
-              // Save to filesystem
+              // Save to public Documents directory under Paraspot folder
               await Filesystem.writeFile({
                 path: filePath,
                 data: base64Data,
-                directory: Directory.Data
+                directory: Directory.Documents
               });
               
               const job: UploadJob = {

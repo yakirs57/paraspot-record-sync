@@ -103,9 +103,9 @@ export function UploadQueueScreen() {
       // Get file URI and open with native video player
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
       
-      // Get the full file URI
+      // Get the full file URI from Documents directory (where videos are now saved)
       const fileUri = await Filesystem.getUri({
-        directory: Directory.Data,
+        directory: Directory.Documents,
         path: job.fileUri
       });
       
