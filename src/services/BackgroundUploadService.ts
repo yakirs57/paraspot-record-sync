@@ -293,11 +293,18 @@ class BackgroundUploadService {
 
   private async convertChunkToBase64(chunk: Blob): Promise<string> {
     try {
-      // Convert blob to base64
-      const arrayBuffer = await chunk.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const base64 = btoa(String.fromCharCode(...uint8Array));
-      return base64;
+      // Use FileReader to convert blob to base64 efficiently
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove the data URL prefix (e.g., "data:application/octet-stream;base64,")
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(chunk);
+      });
     } catch (error) {
       console.error('Failed to convert chunk to base64:', error);
       throw new Error(`Failed to prepare chunk for upload: ${error}`);
