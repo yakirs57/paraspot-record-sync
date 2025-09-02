@@ -110,13 +110,14 @@ class CameraService {
       console.log('Video element:', videoElement);
       
       // Use getUserMedia for both web and native platforms since Capacitor WebView supports it
-      // Use lower resolution settings to prevent lag on mobile devices
+      // Use optimal camera settings to prevent lag - let camera choose best format
       this.videoStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: settings.resolution === '4K' ? 3840 : settings.resolution === '1080p' ? 1920 : 1280,
-          height: settings.resolution === '4K' ? 2160 : settings.resolution === '1080p' ? 1080 : 720,
-          frameRate: settings.frameRate,
-          facingMode: 'environment'
+          facingMode: 'environment',
+          // Use ideal constraints instead of exact to prevent forced conversion
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
         },
         audio: audioSupport
       });
