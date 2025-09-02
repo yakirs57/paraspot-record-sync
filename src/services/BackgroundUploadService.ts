@@ -88,7 +88,7 @@ class BackgroundUploadService {
       console.log(`At BackgroundUploader.L.completed for job ${jobId}, chunk ${chunkIndex} of ${totalChunks}`);
       if (jobId) {
         this.handleChunkCompleted(jobId, chunkIndex, totalChunks, event.status || 200);
-        this.activeUploads.delete(`${jobId}_${chunkIndex}`);
+        this.activeUploads.delete(`${jobId}_I_${chunkIndex}`);
       }
     });
 
@@ -102,7 +102,7 @@ class BackgroundUploadService {
           error: `Chunk ${chunkIndex} failed: ${event.message}`
         });
         this.showUploadNotification(jobId, 'failed', `Upload failed: ${event.message}`);
-        this.activeUploads.delete(`${jobId}_${chunkIndex}`);
+        this.activeUploads.delete(`${jobId}_I_${chunkIndex}`);
         this.jobChunkProgress.delete(jobId);
       }
     });
@@ -112,7 +112,7 @@ class BackgroundUploadService {
     for (const [key, value] of this.activeUploads.entries()) {
       if (value.uploadId === uploadId) {
         console.log(`[findJobByUploadId] Key: ${key} | Value:`, JSON.stringify(value));
-        const [jobId, chunkIndexStr] = key.split('_');
+        const [jobId, chunkIndexStr] = key.split('_I_');
         return { 
           jobId, 
           ...value
@@ -292,7 +292,7 @@ class BackgroundUploadService {
         console.log("Finished API call for chunk upload");
 
         // Store the mapping of job+chunk to upload ID
-        this.activeUploads.set(`${job.id}_${i}`, {
+        this.activeUploads.set(`${job.id}_I_${i}`, {
           uploadId: result.uploadId,
           chunkIndex: i,
           totalChunks: chunks.length
