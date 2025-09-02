@@ -89,17 +89,54 @@ export function UploadQueueScreen() {
     });
   };
 
-  const handleViewVideo = (job: UploadJob) => {
-    if (job.fileUri) {
-      // Create a temporary URL to view the video
-      const link = document.createElement('a');
-      link.href = job.fileUri;
-      link.target = '_blank';
-      link.click();
-    } else {
+  const handleViewVideo = async (job: UploadJob) => {
+    if (!job.fileUri) {
       toast({
         title: "Video Not Available",
         description: "Video file not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Read the video file from filesystem
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      
+      const result = await Filesystem.readFile({
+        path: job.fileUri,
+        directory: Directory.Data
+      });
+      
+      // Convert base64 data back to blob
+      const base64Data = result.data as string;
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'video/mp4' });
+      
+      // Create object URL and open in new tab
+      const videoUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = videoUrl;
+      link.target = '_blank';
+      link.click();
+      
+      // Clean up the object URL after some time
+      setTimeout(() => {
+        URL.revokeObjectURL(videoUrl);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Failed to load video:', error);
+      toast({
+        title: "Video Load Failed", 
+        description: "Unable to load video file",
         variant: "destructive"
       });
     }
