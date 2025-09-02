@@ -168,8 +168,15 @@ class BackgroundUploadService {
     if (!job) return;
 
     try {
+      // Build proper inspection upload ID (same as UploadService)
+      const inspectionUploadId = (
+        job.audioSupport ? 
+        `${job.inspectionRecord.scan_id}XXAUDIOXX_${job.inspectionRecord.type}_${job.inspectionRecord.pid}` : 
+        `${job.inspectionRecord.scan_id}_${job.inspectionRecord.type}_${job.inspectionRecord.pid}`
+      );
+      
       const success = await uploadService.finalizeUpload(
-        job.inspectionId, 
+        inspectionUploadId, 
         job.fileName, 
         totalChunks
       );
@@ -242,10 +249,17 @@ class BackgroundUploadService {
   }
 
   private async startChunkedBackgroundUpload(job: UploadJob) {
+    // Build proper inspection upload ID (same as UploadService)
+    const inspectionUploadId = (
+      job.audioSupport ? 
+      `${job.inspectionRecord.scan_id}XXAUDIOXX_${job.inspectionRecord.type}_${job.inspectionRecord.pid}` : 
+      `${job.inspectionRecord.scan_id}_${job.inspectionRecord.type}_${job.inspectionRecord.pid}`
+    );
+    
     // Get presigned URLs for chunks
     const chunks = await uploadService.getFileChunks(job.fileUri);
     const urlResponse = await uploadService.fetchPresignedUrls(
-      job.inspectionId, 
+      inspectionUploadId, 
       job.fileName, 
       chunks.length, 
       'video/mp4'
