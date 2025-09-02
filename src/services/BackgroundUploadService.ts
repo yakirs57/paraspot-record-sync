@@ -291,73 +291,16 @@ class BackgroundUploadService {
   }
 
   private async saveChunkToFile(chunk: Blob, jobId: string, chunkIndex: number): Promise<string> {
-    const fileName = `chunk_${jobId}_${chunkIndex}.bin`;
-    
+    // Instead of writing to filesystem (which conflicts with camera cleanup),
+    // create a blob URL directly for the background uploader to use
     try {
-      // Convert blob to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          try {
-            const result = reader.result as string;
-            resolve(result.split(',')[1]); // Remove data:... prefix
-          } catch (error) {
-            reject(error);
-          }
-        };
-        reader.onerror = () => reject(new Error('Failed to read blob'));
-        reader.readAsDataURL(chunk);
-      });
-
-      console.log(`Writing chunk file ${fileName} to cache`);
-      
-      // Try writing to filesystem with retry logic
-      let writeSuccess = false;
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (!writeSuccess && attempts < maxAttempts) {
-        try {
-          await Filesystem.writeFile({
-            path: fileName,
-            data: base64,
-            directory: Directory.Cache
-          });
-          writeSuccess = true;
-          console.log(`Successfully wrote chunk file ${fileName}`);
-        } catch (writeError) {
-          attempts++;
-          console.warn(`Filesystem write attempt ${attempts} failed:`, writeError);
-          
-          if (attempts < maxAttempts) {
-            // Wait before retry with exponential backoff
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 100));
-          } else {
-            throw new Error(`Failed to write chunk file after ${maxAttempts} attempts: ${writeError}`);
-          }
-        }
-      }
-      
-      // Get the file URI
-      const result = await Filesystem.getUri({
-        directory: Directory.Cache,
-        path: fileName
-      });
-      
-      console.log(`Got chunk file URI: ${result.uri}`);
-      return result.uri;
-      
+      console.log(`Creating blob URL for chunk ${chunkIndex} of job ${jobId}`);
+      const blobUrl = URL.createObjectURL(chunk);
+      console.log(`Successfully created blob URL: ${blobUrl}`);
+      return blobUrl;
     } catch (error) {
-      console.error(`Failed to save chunk ${chunkIndex} for job ${jobId}:`, error);
-      
-      // As a fallback, try to create a blob URL directly
-      try {
-        console.log(`Falling back to blob URL for chunk ${chunkIndex}`);
-        return URL.createObjectURL(chunk);
-      } catch (blobError) {
-        console.error('Blob URL fallback also failed:', blobError);
-        throw new Error(`All chunk save methods failed: ${error}`);
-      }
+      console.error(`Failed to create blob URL for chunk ${chunkIndex}:`, error);
+      throw new Error(`Failed to prepare chunk for upload: ${error}`);
     }
   }
 
