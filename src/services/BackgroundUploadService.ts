@@ -291,32 +291,74 @@ class BackgroundUploadService {
   }
 
   private async saveChunkToFile(chunk: Blob, jobId: string, chunkIndex: number): Promise<string> {
-    // Convert blob to base64
-    const base64 = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        resolve(result.split(',')[1]); // Remove data:... prefix
-      };
-      reader.readAsDataURL(chunk);
-    });
-
     const fileName = `chunk_${jobId}_${chunkIndex}.bin`;
     
-    console.log("Writing tmp file before uploading");
-    await Filesystem.writeFile({
-      path: fileName,
-      data: base64,
-      directory: Directory.Cache
-    });
-    console.log("[Finished] Writing tmp file before uploading");
-    
-    const result = await Filesystem.getUri({
-      directory: Directory.Cache,
-      path: fileName
-    });
-    
-    return result.uri;
+    try {
+      // Convert blob to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          try {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]); // Remove data:... prefix
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read blob'));
+        reader.readAsDataURL(chunk);
+      });
+
+      console.log(`Writing chunk file ${fileName} to cache`);
+      
+      // Try writing to filesystem with retry logic
+      let writeSuccess = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (!writeSuccess && attempts < maxAttempts) {
+        try {
+          await Filesystem.writeFile({
+            path: fileName,
+            data: base64,
+            directory: Directory.Cache
+          });
+          writeSuccess = true;
+          console.log(`Successfully wrote chunk file ${fileName}`);
+        } catch (writeError) {
+          attempts++;
+          console.warn(`Filesystem write attempt ${attempts} failed:`, writeError);
+          
+          if (attempts < maxAttempts) {
+            // Wait before retry with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 100));
+          } else {
+            throw new Error(`Failed to write chunk file after ${maxAttempts} attempts: ${writeError}`);
+          }
+        }
+      }
+      
+      // Get the file URI
+      const result = await Filesystem.getUri({
+        directory: Directory.Cache,
+        path: fileName
+      });
+      
+      console.log(`Got chunk file URI: ${result.uri}`);
+      return result.uri;
+      
+    } catch (error) {
+      console.error(`Failed to save chunk ${chunkIndex} for job ${jobId}:`, error);
+      
+      // As a fallback, try to create a blob URL directly
+      try {
+        console.log(`Falling back to blob URL for chunk ${chunkIndex}`);
+        return URL.createObjectURL(chunk);
+      } catch (blobError) {
+        console.error('Blob URL fallback also failed:', blobError);
+        throw new Error(`All chunk save methods failed: ${error}`);
+      }
+    }
   }
 
   private async showUploadNotification(jobId: string, type: 'started' | 'completed' | 'failed', message: string) {
