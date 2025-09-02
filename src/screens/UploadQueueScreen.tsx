@@ -194,7 +194,7 @@ export function UploadQueueScreen() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground truncate">
-                      {job.inspectionId}
+                      {(job?.inspectionRecord || {})?.unitAddress || job.inspectionId}
                     </h3>
                     <p className="text-sm text-muted-foreground truncate">
                       {job.fileName}
