@@ -53,7 +53,7 @@ class UploadService {
     try {
       const resp = await fetch(`${this.API_BASE_URL}/media/generate_presigned_url`, postReqOptBuilder(data));
       const jsonResponse = await resp.json();
-      console.log("Presigned URL response:", jsonResponse);
+      console.log("Presigned URL response:\n", JSON.stringify(jsonResponse));
       
       if (jsonResponse.status === 200) {
         return {

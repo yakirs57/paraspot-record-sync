@@ -220,7 +220,7 @@ class BackgroundUploadService {
     console.log(`Processing upload job: ${job.id}`);
     
     // Show upload starting notification
-    await this.showUploadNotification(job.id, 'started', `Starting upload: ${job.fileName}`);
+    await this.showUploadNotification(job.id, 'started', `Starting upload of ${(job?.inspectionRecord || {})?.unitAddress || job.fileName}`);
     
     // Update job status
     storageService.updateUploadJob(job.id, { status: 'uploading', progress: 0 });
@@ -259,6 +259,7 @@ class BackgroundUploadService {
 
     // Start background uploads for each chunk
     for (let i = 0; i < chunks.length; i++) {
+      console.log(`Upload chunk ${i + 1} of ${chunks.length}`);
       const chunk = chunks[i];
       const presignedUrl = urlResponse.presigned_urls[i];
       
