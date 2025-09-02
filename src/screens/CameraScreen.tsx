@@ -134,7 +134,7 @@ export function CameraScreen() {
       
       toast({
         title: "Recording Started",
-        description: `Recording inspection ${inspectionId}`,
+        description: `Recording inspection at ${inspectionData.unitAddress}`,
       });
     } catch (error) {
       console.error('Failed to start recording:', error);

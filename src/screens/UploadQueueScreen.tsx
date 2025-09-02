@@ -45,7 +45,7 @@ export function UploadQueueScreen() {
       await uploadService.resumeUpload(job.id);
       toast({
         title: "Upload Resumed",
-        description: `Resuming upload for ${job.inspectionId}`,
+        description: `Resuming upload for ${job.fileName}`,
       });
     } catch (error) {
       toast({
@@ -60,7 +60,7 @@ export function UploadQueueScreen() {
     uploadService.pauseUpload(job.id);
     toast({
       title: "Upload Paused",
-      description: `Paused upload for ${job.inspectionId}`,
+      description: `Paused upload for ${job.fileName}`,
     });
   };
 
@@ -69,7 +69,7 @@ export function UploadQueueScreen() {
       await uploadService.startUpload(job.id);
       toast({
         title: "Upload Retrying",
-        description: `Retrying upload for ${job.inspectionId}`,
+        description: `Retrying upload for ${job.fileName}`,
       });
     } catch (error) {
       toast({
@@ -85,7 +85,7 @@ export function UploadQueueScreen() {
     loadQueue();
     toast({
       title: "Upload Cancelled",
-      description: `Cancelled upload for ${job.inspectionId}`,
+      description: `Cancelled upload for ${job.fileName}`,
     });
   };
 
