@@ -72,7 +72,7 @@ public class BackgroundUploaderPlugin extends Plugin {
       return;
     }
 
-    Data data = new Data.Builder()
+    Data workData = new Data.Builder()
         .putString("fileUrl", fileUrl)
         .putString("data", data)
         .putString("uploadUrl", uploadUrl)
@@ -82,7 +82,7 @@ public class BackgroundUploaderPlugin extends Plugin {
         .build();
 
     OneTimeWorkRequest req = new OneTimeWorkRequest.Builder(UploaderWorker.class)
-        .setInputData(data)
+        .setInputData(workData)
         .build();
 
     WorkManager workManager = WorkManager.getInstance(getContext());
