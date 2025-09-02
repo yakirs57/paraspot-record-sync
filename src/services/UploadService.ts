@@ -266,10 +266,10 @@ class UploadService {
 
   private async getRecordedBlobs(fileUri: string): Promise<Blob[]> {
     try {
-      // Read the video file from filesystem
+      // Read the video file from filesystem (now saved in Documents directory)
       const result = await Filesystem.readFile({
         path: fileUri,
-        directory: Directory.Data
+        directory: Directory.Documents
       });
       
       // Convert base64 to blob

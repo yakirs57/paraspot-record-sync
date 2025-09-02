@@ -100,28 +100,76 @@ export function UploadQueueScreen() {
     }
 
     try {
-      // Get file URI and open with native video player
+      // Get file URI from Documents directory (where videos are saved)
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      const { Capacitor } = await import('@capacitor/core');
       
-      // Get the full file URI from Documents directory (where videos are now saved)
       const fileUri = await Filesystem.getUri({
         directory: Directory.Documents,
         path: job.fileUri
       });
       
-      // Open with device's native video player using Browser plugin
-      const { Browser } = await import('@capacitor/browser');
+      console.log('Attempting to open video at:', fileUri.uri);
       
-      await Browser.open({ 
-        url: fileUri.uri,
-        presentationStyle: 'fullscreen'
-      });
+      if (Capacitor.isNativePlatform()) {
+        // On native platforms, create a video element and play in-app
+        const videoElement = document.createElement('video');
+        videoElement.src = fileUri.uri;
+        videoElement.controls = true;
+        videoElement.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: black;
+          z-index: 9999;
+          object-fit: contain;
+        `;
+        
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '✕';
+        closeButton.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 10000;
+          background: rgba(0,0,0,0.7);
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          font-size: 20px;
+          cursor: pointer;
+        `;
+        closeButton.onclick = () => {
+          document.body.removeChild(videoElement);
+          document.body.removeChild(closeButton);
+        };
+        
+        document.body.appendChild(videoElement);
+        document.body.appendChild(closeButton);
+        
+        // Try to play the video
+        videoElement.play().catch(error => {
+          console.error('Failed to play video:', error);
+          document.body.removeChild(videoElement);
+          document.body.removeChild(closeButton);
+          throw error;
+        });
+        
+      } else {
+        // On web platform, open in new tab
+        window.open(fileUri.uri, '_blank');
+      }
       
     } catch (error) {
-      console.error('Failed to open video natively:', error);
+      console.error('Failed to open video:', error);
       toast({
         title: "Video Open Failed", 
-        description: "Unable to open video with native player",
+        description: "Unable to open video. Please check if the file exists.",
         variant: "destructive"
       });
     }

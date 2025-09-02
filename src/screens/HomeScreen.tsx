@@ -197,7 +197,7 @@ export function HomeScreen() {
                   className="flex items-center justify-between p-4"
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium">{inspection.unitAddress.slice(0, 20)}{inspection.unitAddress.length > 20 ? '...' : ''}</span>
+                    <span className="font-medium">{(inspection.unitAddress || '').slice(0, 20)}{(inspection.unitAddress || '').length > 20 ? '...' : ''}</span>
                     <span className="text-xs text-muted-foreground mt-1">
                       {inspection.lastUsedAt ? new Date(inspection.lastUsedAt).toLocaleString() : 'Never used'}
                     </span>
