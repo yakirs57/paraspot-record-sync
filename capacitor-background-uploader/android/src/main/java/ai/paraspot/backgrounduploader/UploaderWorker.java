@@ -41,13 +41,12 @@ public class UploaderWorker extends Worker {
     public Result doWork() {
         Data input = getInputData();
         String fileUrl     = input.getString("fileUrl");
-        String data        = input.getString("data");
         String uploadUrl   = input.getString("uploadUrl");
         String method      = input.getString("method");
         String headersJson = input.getString("headers");
         String field       = input.getString("field");
 
-        if ((fileUrl == null || fileUrl.isEmpty()) && (data == null || data.isEmpty())) {
+        if (fileUrl == null || fileUrl.isEmpty()) {
             return Result.failure();
         }
         if (uploadUrl == null) return Result.failure();
@@ -67,23 +66,16 @@ public class UploaderWorker extends Worker {
         try {
         OkHttpClient client = new OkHttpClient.Builder().build();
 
-        // Create RequestBody from either file or base64 data
-        RequestBody rawBody;
-        String fileName = "upload";
+        // Create RequestBody from file path
+        String path = fileUrl.startsWith("file://") ? fileUrl.substring("file://".length()) : fileUrl;
+        File file = new File(path);
+        if (!file.exists()) throw new Exception("File not found: " + path);
         
-        if (data != null && !data.isEmpty()) {
-            // Use base64 data
-            byte[] bytes = android.util.Base64.decode(data, android.util.Base64.DEFAULT);
-            rawBody = RequestBody.create(bytes, MediaType.parse("application/octet-stream"));
-            fileName = "chunk.tmp";
-        } else {
-            // Use file path
-            String path = fileUrl.startsWith("file://") ? fileUrl.substring("file://".length()) : fileUrl;
-            File file = new File(path);
-            if (!file.exists()) throw new Exception("File not found: " + path);
-            rawBody = RequestBody.create(file, MediaType.parse("application/octet-stream"));
-            fileName = file.getName();
-        }
+        RequestBody rawBody = RequestBody.create(file, MediaType.parse("application/octet-stream"));
+        String fileName = file.getName();
+        
+        // Check if this is a temp file (created from base64 data)
+        boolean isTempFile = file.getParentFile().equals(getApplicationContext().getCacheDir());
 
         Request.Builder reqBuilder = new Request.Builder().url(uploadUrl);
 
@@ -119,6 +111,11 @@ public class UploaderWorker extends Worker {
         }
 
         try (Response resp = client.newCall(request).execute()) {
+            // Cleanup temp file after upload attempt
+            if (isTempFile) {
+                file.delete();
+            }
+            
             if (!resp.isSuccessful()) {
                 Data output = new Data.Builder()
                     .putString("error", "HTTP " + resp.code())
@@ -142,6 +139,15 @@ public class UploaderWorker extends Worker {
             return Result.success(output);
         }
         } catch (Exception e) {
+        // Cleanup temp file on error
+        try {
+            String path = fileUrl.startsWith("file://") ? fileUrl.substring("file://".length()) : fileUrl;
+            File file = new File(path);
+            if (file.getParentFile().equals(getApplicationContext().getCacheDir())) {
+                file.delete();
+            }
+        } catch (Exception ignored) {}
+        
         Notification n = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
             .setContentTitle("Upload failed")
             .setContentText(e.getMessage() != null ? e.getMessage() : "Error")
