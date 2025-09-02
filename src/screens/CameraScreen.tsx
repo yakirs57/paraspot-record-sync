@@ -66,27 +66,10 @@ export function CameraScreen() {
     setHasBackCamera(result.hasBackCamera);
     
     if (result.hasPermission && result.hasBackCamera) {
-      // Open camera immediately when permissions are granted
-      if (videoRef.current) {
-        try {
-          console.log('Opening camera with video element:', videoRef.current);
-          await cameraService.openCamera(videoRef.current, audioSupport);
-          console.log('Camera opened successfully');
-          toast({
-            title: "Camera Ready",
-            description: "You can now start recording",
-          });
-        } catch (error) {
-          console.error('Failed to open camera:', error);
-          toast({
-            title: "Camera Error",
-            description: "Unable to open camera. Please try again.",
-            variant: "destructive"
-          });
-        }
-      } else {
-        console.error('Video element not available');
-      }
+      toast({
+        title: "Camera Ready",
+        description: "You can now start recording",
+      });
     } else if (!result.hasPermission) {
       console.log('Permission denied');
       toast({
@@ -103,6 +86,39 @@ export function CameraScreen() {
       });
     }
   };
+
+  const openRecording = async () => {
+    // Open camera immediately when permissions are granted
+    if (videoRef.current) {
+      try {
+        console.log('Opening camera with video element:', videoRef.current);
+        await cameraService.openCamera(videoRef.current, audioSupport);
+        console.log('Camera opened successfully');
+      } catch (error) {
+        console.error('Failed to open camera:', error);
+        toast({
+          title: "Camera Error",
+          description: "Unable to open camera. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      console.error('Video element not available');
+    }
+  };
+
+  // Open camera when permissions are granted and videoRef is ready
+  useEffect(() => {
+    if (
+      hasPermission === true &&
+      hasBackCamera === true &&
+      videoRef.current
+    ) {
+      openRecording();
+    }
+    // Only run when permission, camera, or videoRef changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPermission, hasBackCamera, videoRef.current]);
 
   const startRecording = async () => {
     if (!hasPermission || !hasBackCamera) return;
@@ -328,7 +344,7 @@ export function CameraScreen() {
 
         {/* Inspection ID Display */}
         <div className="fixed top-20 right-4 px-3 py-1 bg-black/50 rounded-full">
-          <span className="text-white text-sm font-medium">{inspectionData.unitAddress.slice(0, 15)}{inspectionData.unitAddress.length > 15 ? '...' : ''}</span>
+          <span className="text-white text-sm font-medium">{inspectionData.unitAddress.slice(0, 25)}{inspectionData.unitAddress.length > 25 ? '...' : ''}</span>
         </div>
       </div>
     </div>
