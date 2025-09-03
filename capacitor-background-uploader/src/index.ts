@@ -11,5 +11,11 @@ export interface BackgroundUploaderPlugin {
   addListener(eventName: 'error',     cb: (e: ErrorEvent)     => void): Promise<{ remove: () => void }>;
 }
 
-export const BackgroundUploader = registerPlugin<BackgroundUploaderPlugin>('BackgroundUploader');
+export const BackgroundUploader = registerPlugin<BackgroundUploaderPlugin>('BackgroundUploader', {
+  web: async () => {
+    const { BackgroundUploaderWeb } = await import('./web');
+    return new BackgroundUploaderWeb();
+  }
+});
+
 export * from './definitions';
