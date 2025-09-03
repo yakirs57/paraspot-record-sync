@@ -16,10 +16,20 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+        storeFile file(System.getenv("PARASPOT_STORE_FILE") ?: PARASPOT_STORE_FILE)
+        storePassword (System.getenv("PARASPOT_STORE_PASSWORD") ?: PARASPOT_STORE_PASSWORD)
+        keyAlias     (System.getenv("PARASPOT_KEY_ALIAS") ?: PARASPOT_KEY_ALIAS)
+        keyPassword  (System.getenv("PARASPOT_KEY_PASSWORD") ?: PARASPOT_KEY_PASSWORD)
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),'proguard-rules.pro'
         }
     }
 }

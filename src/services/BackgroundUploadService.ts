@@ -195,7 +195,7 @@ class BackgroundUploadService {
       
       if (success) {
         storageService.updateUploadJob(jobId, { status: 'completed', progress: 100 });
-        this.showUploadNotification(jobId, 'completed', `Upload completed: ${job.fileName}`);
+        this.showUploadNotification(jobId, 'completed', `Upload completed of ${job.inspectionRecord.type.replace(/_/g, ' ')} inspection at ${job.inspectionRecord.unitAddress}: ${job.fileName}`);
       } else {
         throw new Error('Failed to finalize upload');
       }
