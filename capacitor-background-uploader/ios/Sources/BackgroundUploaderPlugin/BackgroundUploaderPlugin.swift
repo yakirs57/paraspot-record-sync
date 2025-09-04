@@ -43,11 +43,12 @@ public class BackgroundUploaderPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionDe
 
         if method == "PUT" {
             if let dataStr = dataStr {
-                // Handle base64 data
+                // Handle base64 data - write to temp file for background session
                 guard let data = Data(base64Encoded: dataStr) else { 
                     call.reject("Invalid base64 data"); return 
                 }
-                let task = session.uploadTask(with: req, from: data)
+                let tempURL = createTempFile(with: data)
+                let task = session.uploadTask(with: req, fromFile: tempURL)
                 task.resume()
                 call.resolve(["uploadId": String(task.taskIdentifier)])
                 return
@@ -63,7 +64,7 @@ public class BackgroundUploaderPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionDe
             }
         }
 
-        // multipart
+        // multipart - write to temp file for background session
         let boundary = "----CapBoundary\(UUID().uuidString)"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         
@@ -101,7 +102,8 @@ public class BackgroundUploaderPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionDe
         }
         body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
 
-        let task = session.uploadTask(with: req, from: body)
+        let tempURL = createTempFile(with: body)
+        let task = session.uploadTask(with: req, fromFile: tempURL)
         task.resume()
         call.resolve(["uploadId": String(task.taskIdentifier)])
     }
@@ -143,5 +145,12 @@ public class BackgroundUploaderPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionDe
         content.body  = body
         let req = UNNotificationRequest(identifier: "upload-progress", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+    }
+    
+    private func createTempFile(with data: Data) -> URL {
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempFile = tempDir.appendingPathComponent(UUID().uuidString)
+        try? data.write(to: tempFile)
+        return tempFile
     }
 }
