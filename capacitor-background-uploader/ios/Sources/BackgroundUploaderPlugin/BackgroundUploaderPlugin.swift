@@ -21,10 +21,17 @@ public class BackgroundUploaderPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionDe
 
     @objc func startUpload(_ call: CAPPluginCall) {
         guard
-            let fileUrlStr = call.getString("fileUrl"),
             let uploadUrlStr = call.getString("uploadUrl"),
             let target = URL(string: uploadUrlStr)
-        else { call.reject("fileUrl and uploadUrl are required"); return }
+        else { call.reject("uploadUrl is required"); return }
+
+        let fileUrlStr = call.getString("fileUrl")
+        let dataStr = call.getString("data")
+        
+        if fileUrlStr == nil && dataStr == nil {
+            call.reject("fileUrl or data is required")
+            return
+        }
 
         let method  = call.getString("method")  ?? "POST"
         let headers = call.getObject("headers") as? [String:String] ?? [:]
@@ -35,33 +42,62 @@ public class BackgroundUploaderPlugin: CAPPlugin, CAPBridgedPlugin, URLSessionDe
         headers.forEach { req.setValue($0.value, forHTTPHeaderField: $0.key) }
 
         if method == "PUT" {
-            guard let fileURL = URL(string: fileUrlStr) else { call.reject("bad fileUrl"); return }
-            let task = session.uploadTask(with: req, fromFile: fileURL)
-            task.resume()
-            call.resolve(["uploadId": String(task.taskIdentifier)])
-            return
+            if let dataStr = dataStr {
+                // Handle base64 data
+                guard let data = Data(base64Encoded: dataStr) else { 
+                    call.reject("Invalid base64 data"); return 
+                }
+                let task = session.uploadTask(with: req, from: data)
+                task.resume()
+                call.resolve(["uploadId": String(task.taskIdentifier)])
+                return
+            } else if let fileUrlStr = fileUrlStr {
+                // Handle file URL
+                guard let fileURL = URL(string: fileUrlStr) else { 
+                    call.reject("bad fileUrl"); return 
+                }
+                let task = session.uploadTask(with: req, fromFile: fileURL)
+                task.resume()
+                call.resolve(["uploadId": String(task.taskIdentifier)])
+                return
+            }
         }
 
         // multipart
         let boundary = "----CapBoundary\(UUID().uuidString)"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        guard let fileURL = URL(string: fileUrlStr) else { call.reject("bad fileUrl"); return }
-        let fileName = fileURL.lastPathComponent
-
+        
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"\(field)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
-        if let stream = InputStream(url: fileURL) {
-            stream.open()
-            let bufSize = 64 * 1024
-            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
-            defer { buffer.deallocate() }
-            while stream.hasBytesAvailable {
-                let read = stream.read(buffer, maxLength: bufSize)
-                if read > 0 { body.append(buffer, count: read) } else { break }
+        
+        if let dataStr = dataStr {
+            // Handle base64 data for multipart
+            guard let data = Data(base64Encoded: dataStr) else { 
+                call.reject("Invalid base64 data"); return 
             }
-            stream.close()
+            let fileName = "chunk.dat"
+            body.append("Content-Disposition: form-data; name=\"\(field)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
+            body.append(data)
+        } else if let fileUrlStr = fileUrlStr {
+            // Handle file URL for multipart
+            guard let fileURL = URL(string: fileUrlStr) else { 
+                call.reject("bad fileUrl"); return 
+            }
+            let fileName = fileURL.lastPathComponent
+            body.append("Content-Disposition: form-data; name=\"\(field)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
+            if let stream = InputStream(url: fileURL) {
+                stream.open()
+                let bufSize = 64 * 1024
+                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
+                defer { buffer.deallocate() }
+                while stream.hasBytesAvailable {
+                    let read = stream.read(buffer, maxLength: bufSize)
+                    if read > 0 { body.append(buffer, count: read) } else { break }
+                }
+                stream.close()
+            }
         }
         body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
 
