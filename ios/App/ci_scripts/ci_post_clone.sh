@@ -2,7 +2,7 @@
 set -euxo pipefail
 
 # Always start from the workspace root that Xcode Cloud uses
-cd "$CI_WORKSPACE"
+cd "$CI_WORKSPACE_PATH"
 
 # 1) Build your Vite app
 npm ci
