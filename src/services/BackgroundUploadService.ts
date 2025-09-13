@@ -41,9 +41,7 @@ class BackgroundUploadService {
 
   async initialize() {
     try {
-      // Request notification permissions
-      await LocalNotifications.requestPermissions();
-      
+      // Defer notification permission request until needed
       // Set up background uploader listeners
       await this.setupBackgroundUploaderListeners();
       
@@ -324,7 +322,22 @@ class BackgroundUploadService {
     }
   }
 
+  private async ensureNotificationPermission(): Promise<boolean> {
+    try {
+      const status = await LocalNotifications.checkPermissions();
+      if ((status as any).display === 'granted') return true;
+      const req = await LocalNotifications.requestPermissions();
+      return (req as any).display === 'granted';
+    } catch (e) {
+      console.warn('LocalNotifications permission check failed:', e);
+      return false;
+    }
+  }
+
   private async showUploadNotification(jobId: string, type: 'started' | 'completed' | 'failed', message: string) {
+    const allowed = await this.ensureNotificationPermission();
+    if (!allowed) return;
+
     const notificationId = this.notificationId++;
     
     let title = '';
@@ -364,6 +377,9 @@ class BackgroundUploadService {
   private async updateProgressNotification(jobId: string, progress: number) {
     const job = storageService.getUploadQueue().find(j => j.id === jobId);
     if (!job || !job.notificationId) return;
+
+    const allowed = await this.ensureNotificationPermission();
+    if (!allowed) return;
 
     await LocalNotifications.schedule({
       notifications: [
