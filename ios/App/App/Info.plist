@@ -23,13 +23,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs camera access to take photos/videos.</string>
+	<string>This app uses your device's camera to allow you to record high-quality video inspections directly from the app.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>This app needs microphone access to record audio.</string>
+	<string>This app requires microphone access to enable audio support for video inspections.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Allow saving captured media to your photo library.</string>
+	<string>Allow saving captured video inspections to your photo and video library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs access to your photo library to select or save media.</string>
+	<string>This app requires access to your device's photo and video library so you can upload existing media files as a video inspection, or to save captured video inspections to your library.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
